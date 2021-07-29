@@ -5,4 +5,4 @@ services:
     build: .
     image: $USER/uma-user-agent
     ports:
-      - 8080:8080
+      - 8080:80

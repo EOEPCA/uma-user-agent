@@ -6,13 +6,15 @@ import (
 )
 
 type Configuration struct {
-	Port int
+	Port             int
+	UserIdCookieName string
 }
 
 var Config = Configuration{}
 
 var defaults = Configuration{
-	Port: 80,
+	Port:             80,
+	UserIdCookieName: "auth_user_id",
 }
 
 func getPort() int {
@@ -29,8 +31,20 @@ func getPort() int {
 	return port
 }
 
+func getUserIdCookieName() string {
+	userIdCookieName := defaults.UserIdCookieName
+	val, ok := os.LookupEnv("USER_ID_COOKIE_NAME")
+	if ok {
+		if len(val) > 0 {
+			userIdCookieName = val
+		}
+	}
+	return userIdCookieName
+}
+
 func (config *Configuration) init() {
 	config.Port = getPort()
+	config.UserIdCookieName = getUserIdCookieName()
 }
 
 func init() {

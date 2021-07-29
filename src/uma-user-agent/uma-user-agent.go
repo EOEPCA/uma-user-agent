@@ -20,8 +20,10 @@ func main() {
 	// Register middlewares
 	router.Use(handler.RequestLogger)
 
+	// Register request handler
 	router.PathPrefix("").HandlerFunc(handler.NginxAuthRequestHandler)
 
+	// Start listening
 	port := config.Config.Port
 	log.Info("Begin listening on port ", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), router))
