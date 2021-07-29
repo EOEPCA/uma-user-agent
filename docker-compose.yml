@@ -1,0 +1,8 @@
+version: "3"
+
+services:
+  uma-user-agent:
+    build: .
+    image: $USER/uma-user-agent
+    ports:
+      - 8080:8080
