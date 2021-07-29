@@ -8,10 +8,9 @@ import (
 	"strings"
 )
 
-// UMA realm=eoepca,as_uri=https://test.185.52.193.87.nip.io,ticket=0a6f8d80-d618-44b1-b9e4-77a425d4981d
-//
-// /.well-known/uma2-configuration
-
+// UnpackWwwAuthenticateHeader gets the 'Auth Server URL' and Ticket from the
+// supplied string which is interpreted as a Www-Authentication header from a
+// UMA flow 401 response
 func UnpackWwwAuthenticateHeader(wwwAuthenticate string) (as_uri string, ticket string, err error) {
 	as_uri = ""
 	ticket = ""
@@ -42,6 +41,9 @@ func UnpackWwwAuthenticateHeader(wwwAuthenticate string) (as_uri string, ticket 
 	return as_uri, ticket, err
 }
 
+// LookupTokenEndpoint performs a lookup (HTTP GET) on the Authorization Server
+// via the supplied AS URL, to retrieve the Token Endpoint from the UMA configuration
+// endpoint
 func LookupTokenEndpoint(authServerUrl string) (tokenEndpointUrl string, err error) {
 	tokenEndpointUrl = ""
 	err = nil
