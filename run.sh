@@ -12,4 +12,6 @@ trap onExit EXIT
 
 go install github.com/cosmtrek/air@latest
 
+export PORT=8080
+
 air

@@ -6,14 +6,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gorilla/handlers"
+	"github.com/EOEPCA/uma-user-agent/src/config"
+	"github.com/EOEPCA/uma-user-agent/src/handler"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
-
-func loggingMiddleware(h http.Handler) http.Handler {
-	return handlers.CombinedLoggingHandler(os.Stdout, h)
-}
 
 func main() {
 	log.Info(filepath.Base(os.Args[0]), " STARTING")
@@ -21,11 +18,11 @@ func main() {
 	router := mux.NewRouter()
 
 	// Register middlewares
-	router.Use(loggingMiddleware)
+	router.Use(handler.RequestLogger)
 
-	router.PathPrefix("").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "this is the uma-user-agent")
-	})
+	router.PathPrefix("").HandlerFunc(handler.NginxAuthRequestHandler)
 
-	http.ListenAndServe(":8080", router)
+	port := config.Config.Port
+	log.Info("Begin listening on port ", port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), router))
 }
