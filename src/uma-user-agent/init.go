@@ -1,12 +1,13 @@
 package main
 
 import (
+	"github.com/EOEPCA/uma-user-agent/src/config"
 	log "github.com/sirupsen/logrus"
 )
 
 func init() {
 	// log level
-	log.SetLevel(log.TraceLevel)
+	log.SetLevel(config.Config.LogLevel)
 
 	// log format
 	logFormatter := new(log.TextFormatter)
