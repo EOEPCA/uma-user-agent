@@ -5,62 +5,76 @@ import (
 	"net/http"
 
 	"github.com/EOEPCA/uma-user-agent/src/config"
+	"github.com/EOEPCA/uma-user-agent/src/uma"
 	log "github.com/sirupsen/logrus"
 )
 
-type requestDetails struct {
+type ClientRequestDetails struct {
 	OrigUri     string
 	OrigMethod  string
 	UserIdToken string
+	Rpt         string
 }
+
+type pepResponseHandlerFunc func(ClientRequestDetails, *http.Response, http.ResponseWriter, *http.Request)
 
 func NginxAuthRequestHandler(w http.ResponseWriter, r *http.Request) {
 	// Gather expected info from headers/cookies
-	details, err := processRequestHeaders(w, r)
+	clientRequestDetails, err := processRequestHeaders(w, r)
 	if err != nil {
 		log.Error("ERROR processing request headers: ", err)
 		return
 	}
 
 	// Naive call to the PEP
-	//
-	// Prepare the request
-	pepReq, err := http.NewRequest("GET", config.Config.PepUrl, nil)
+	pepResponse, err := pepAuthRequest(clientRequestDetails)
 	if err != nil {
-		log.Error("Error establishing request for PEP: ", err)
+		msg := "ERROR making naive call to the pep auth_request endpoint"
+		log.Error(msg, ": ", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, msg)
 		return
-	}
-	pepReq.Header.Set("X-Orig-Uri", details.OrigUri)
-	pepReq.Header.Set("X-Orig-Method", details.OrigMethod)
-	pepReq.Header.Set("X-User-Id", details.UserIdToken)
-	//
-	// Send the request
-	client := http.Client{}
-	pepResp, err := client.Do(pepReq)
-	if err != nil {
-		log.Error("Error requesting auth from PEP: ", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	//
-	// Handle the response
-	switch code := pepResp.StatusCode; {
-	case code >= 200 && code <= 299:
-		// zzz
-	case code == 401:
-		// zzz
-	case code == 403:
-		// zzz
-	default:
-		// zzz
 	}
 
-	fmt.Fprintln(w, "this is the uma-user-agent")
+	// Handle the response
+	handlePepResponse(clientRequestDetails, pepResponse, handlePepNaiveUnauthorized, w, r)
 }
 
-func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details requestDetails, err error) {
-	details = requestDetails{}
+func handlePepResponse(clientRequestDetails ClientRequestDetails, pepResponse *http.Response, unauthResponseHandler pepResponseHandlerFunc, w http.ResponseWriter, r *http.Request) {
+	switch code := pepResponse.StatusCode; {
+	case code >= 200 && code <= 299:
+		// AUTHORIZED
+		msg := fmt.Sprintf("PEP authorized the request with code: %v", code)
+		log.Info(msg)
+		w.WriteHeader(code)
+		fmt.Fprint(w, msg)
+	case code == 401:
+		// UNAUTHORIZED
+		if unauthResponseHandler != nil {
+			unauthResponseHandler(clientRequestDetails, pepResponse, w, r)
+		} else {
+			msg := "PEP responded UNAUTHORIZED"
+			log.Info(msg)
+			w.WriteHeader(code)
+			fmt.Fprint(w, msg)
+		}
+	case code == 403:
+		// FORBIDDEN
+		msg := "PEP responded FORBIDDEN"
+		log.Info(msg)
+		w.WriteHeader(code)
+		fmt.Fprint(w, msg)
+	default:
+		// UNEXPECTED
+		msg := fmt.Sprintf("Unexpected return code from PEP auth_request endpoint: %v", code)
+		log.Error(msg)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, msg)
+	}
+}
+
+func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details ClientRequestDetails, err error) {
+	details = ClientRequestDetails{}
 	err = nil
 
 	// Gather expected info from headers/cookies
@@ -88,4 +102,99 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details requ
 	log.Debug(fmt.Sprintf("Handling request: origUri: %v, origMethod: %v, userIdToken: %v", details.OrigUri, details.OrigMethod, details.UserIdToken))
 
 	return
+}
+
+// pepAuthRequest calls the PEP `auth_request` endpoint
+func pepAuthRequest(details ClientRequestDetails) (response *http.Response, err error) {
+	response = nil
+	err = nil
+
+	// Prepare the request
+	pepReq, err := http.NewRequest("GET", config.Config.PepUrl, nil)
+	if err != nil {
+		err = fmt.Errorf("error establishing request for PEP: %w", err)
+		log.Error(err)
+		return
+	}
+	pepReq.Header.Set("X-Orig-Uri", details.OrigUri)
+	pepReq.Header.Set("X-Orig-Method", details.OrigMethod)
+	pepReq.Header.Set("X-User-Id", details.UserIdToken)
+	if len(details.Rpt) > 0 {
+		pepReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", details.Rpt))
+	}
+
+	// Send the request
+	response, err = uma.HttpClient.Do(pepReq)
+	if err != nil {
+		response = nil
+		err = fmt.Errorf("error requesting auth from PEP: %w", err)
+		log.Error(err)
+	}
+
+	return response, err
+}
+
+func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUnauthResponse *http.Response, w http.ResponseWriter, r *http.Request) {
+	// Check that this is a 401 response
+	if pepUnauthResponse.StatusCode != http.StatusUnauthorized {
+		msg := "not an Unauthorized response"
+		log.Error(msg)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, msg)
+		return
+	}
+
+	// Get the expected Www-Authenticate header
+	wwwAuthHeader := pepUnauthResponse.Header.Get("Www-Authenticate")
+	if len(wwwAuthHeader) == 0 {
+		msg := "no Www-Authenticate header in PEP response"
+		log.Error(msg)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, msg)
+		return
+	}
+
+	// Parse the Www-Authenticate header
+	authServerUrl, ticket, err := uma.UnpackWwwAuthenticateHeader(wwwAuthHeader)
+	if err != nil {
+		msg := "could not parse the Www-Authenticate header"
+		log.Error(msg, ": ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, msg)
+		return
+	}
+	// Store the Authorization Server
+	_authServer, _ := uma.AuthorizationServers.LoadOrStore(authServerUrl, uma.NewAuthorizationServer(authServerUrl))
+	authServer, ok := _authServer.(uma.AuthorizationServer)
+	if !ok {
+		msg := "error getting the Authorization Server details"
+		log.Error(msg)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, msg)
+		return
+	}
+
+	// Exchange the ticket for an RPT at the Authorization Server
+	umaClient := &uma.UmaClient{Id: config.Config.ClientId, Secret: config.Config.ClientSecret}
+	clientRequestDetails.Rpt, err = umaClient.ExchangeTicketForRpt(authServer, clientRequestDetails.UserIdToken, ticket)
+	if err != nil {
+		msg := "error getting RPT from Authorization Server"
+		log.Error(msg, ": ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, msg)
+		return
+	}
+
+	// Call the PEP with the RPT
+	pepResponse, err := pepAuthRequest(clientRequestDetails)
+	if err != nil {
+		msg := "ERROR making call (with RPT) to the pep auth_request endpoint"
+		log.Error(msg, ": ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, msg)
+		return
+	}
+
+	// Handle the response
+	handlePepResponse(clientRequestDetails, pepResponse, nil, w, r)
 }
