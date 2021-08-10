@@ -25,8 +25,8 @@ func TestUnpackWwwAuthenticateHeader(t *testing.T) {
 }
 
 func TestGetTokenEndpoint(t *testing.T) {
-	expectedTokenEndpointUrl := "https://test.185.52.193.87.nip.io/oxauth/restv1/token"
 	authServerUrl := "https://test.185.52.193.87.nip.io"
+	expectedTokenEndpointUrl := authServerUrl + "/oxauth/restv1/token"
 
 	authServer := uma.NewAuthorizationServer(authServerUrl)
 	tokenEndpointUrl, err := authServer.GetTokenEndpoint()
