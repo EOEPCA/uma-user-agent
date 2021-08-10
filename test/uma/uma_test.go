@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/EOEPCA/uma-user-agent/src/uma"
+	"github.com/EOEPCA/uma-user-agent/pkg/uma"
 )
 
 func TestUnpackWwwAuthenticateHeader(t *testing.T) {

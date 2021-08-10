@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/EOEPCA/uma-user-agent/src/uma"
+	"github.com/EOEPCA/uma-user-agent/pkg/uma"
 	log "github.com/sirupsen/logrus"
 )
 
