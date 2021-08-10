@@ -11,8 +11,7 @@ onExit() {
 trap onExit EXIT
 
 export LOG_LEVEL=trace
-export CLIENT_ID="691892fd-1e58-4e44-8355-1f3b7634af8f"
-export CLIENT_SECRET="eb28831f-3e0f-4580-a103-8fd1e0adbb3c"
+export CLIENT_ID="22ba0c56-9780-4b0b-ad71-d745c166ca3b"
+export CLIENT_SECRET="0e3e1d0d-9002-4d44-bbff-a170efa18512"
 
-go test -v ./test/... 
-# go test -v ./test/uma/uma-client_test.go
+go test ./... && echo SUCCESS || echo FAILED
