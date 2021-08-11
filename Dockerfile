@@ -1,7 +1,7 @@
 FROM golang:alpine as builder
 WORKDIR /appbuild
 COPY . .
-RUN go build ./src/uma-user-agent
+RUN go build ./cmd/uma-user-agent
 
 FROM alpine
 WORKDIR /app
