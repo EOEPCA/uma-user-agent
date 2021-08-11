@@ -21,7 +21,7 @@ var umaClient = uma.UmaClient{Id: config.Config.ClientId, Secret: config.Config.
 var username = "eric"
 var password = "defaultPWD"
 var userIdToken = ""
-var testTicket = "bbaed2cf-ae16-433f-862c-d7fbc2d758ef"
+var testTicket = "b33f6aff-ac5c-403f-96aa-b1aff58488cf"
 
 // TestMain performs testing setup
 func TestMain(m *testing.M) {

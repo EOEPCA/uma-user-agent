@@ -14,4 +14,12 @@ export LOG_LEVEL=trace
 export CLIENT_ID="22ba0c56-9780-4b0b-ad71-d745c166ca3b"
 export CLIENT_SECRET="0e3e1d0d-9002-4d44-bbff-a170efa18512"
 
-go test ./... && echo SUCCESS || echo FAILED
+GOFLAGS="-count=1" go test ./...
+let status=$?
+if test $status -eq 0; then
+  echo SUCCESS
+else
+  echo FAILED
+fi
+
+exit $status
