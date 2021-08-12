@@ -40,13 +40,18 @@ func setup() {
 
 // TestLookupAuthServer tests store and retrieve from the AuthServer cache
 func TestLookupAuthServer(t *testing.T) {
-	_authServer, _ := uma.AuthorizationServers.LoadOrStore(authServerUrl, *uma.NewAuthorizationServer(authServerUrl))
-	_authServer, ok := _authServer.(uma.AuthorizationServer)
-	if !ok {
-		t.Errorf("error getting the Authorization Server details")
-	} else {
-		t.Logf("successfully retrieved Authorization Server: %v", _authServer)
+	doLoadOrStore := func(context string, expectLoaded bool) {
+		_authServer, loaded := uma.AuthorizationServers.LoadOrStore(authServerUrl, *uma.NewAuthorizationServer(authServerUrl))
+		if len(_authServer.GetUrl()) == 0 {
+			t.Errorf("[%v] error getting the Authorization Server details", context)
+		} else if loaded != expectLoaded {
+			t.Errorf("[%v] loaded status discrepency=> expected: %v, got: %v", context, expectLoaded, loaded)
+		} else {
+			t.Logf("[%v] successfully retrieved Authorization Server: %v", context, _authServer)
+		}
 	}
+	doLoadOrStore("Attempt#1", false)
+	doLoadOrStore("Attempt#2", true)
 }
 
 // TestGetTokenEndpoint tests getting the Token Endpoint from the Authorization Server

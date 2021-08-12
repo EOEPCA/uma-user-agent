@@ -5,18 +5,21 @@ import (
 	"fmt"
 	"io"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 )
 
+var AuthorizationServers = NewAuthorizationServerList()
+
+//------------------------------------------------------------------------------
+
+// AuthorizationServer represents a single Authorization Server
 type AuthorizationServer struct {
 	url           string
 	tokenEndpoint string
 }
 
-type AuthorizationServerList struct {
-	sync.Map
-}
-
-var AuthorizationServers = AuthorizationServerList{}
+//------------------------------------------------------------------------------
 
 func NewAuthorizationServer(url string) *AuthorizationServer {
 	return &AuthorizationServer{url: url}
@@ -76,3 +79,65 @@ func (authServer *AuthorizationServer) GetTokenEndpoint() (tokenEndpointUrl stri
 	tokenEndpointUrl = authServer.tokenEndpoint
 	return
 }
+
+//------------------------------------------------------------------------------
+
+// AuthorizationServerList is a thread-safe collection of Authorization Servers
+type AuthorizationServerList struct {
+	rwMutex     sync.RWMutex
+	authServers map[string]AuthorizationServer
+}
+
+//------------------------------------------------------------------------------
+
+func NewAuthorizationServerList() *AuthorizationServerList {
+	return &AuthorizationServerList{authServers: make(map[string]AuthorizationServer)}
+}
+
+// Delete deletes the value for a key
+func (asl *AuthorizationServerList) Delete(key string) {
+	asl.rwMutex.Lock()
+	defer asl.rwMutex.Unlock()
+	delete(asl.authServers, key)
+}
+
+// Load returns the value stored in the map for a key.
+// The ok result indicates whether value was found in the map.
+func (asl *AuthorizationServerList) Load(key string) (value AuthorizationServer, ok bool) {
+	asl.rwMutex.RLock()
+	defer asl.rwMutex.RUnlock()
+	value, ok = asl.authServers[key]
+	return
+}
+
+// LoadAndDelete deletes the value for a key, returning the previous value if any.
+// The loaded result reports whether the key was present.
+func (asl *AuthorizationServerList) LoadAndDelete(key string) (value AuthorizationServer, loaded bool) {
+	if value, loaded = asl.Load(key); loaded {
+		asl.Delete(key)
+	}
+	return
+}
+
+// LoadOrStore returns the existing value for the key if present.
+// Otherwise, it stores and returns the given value.
+// The loaded result is true if the value was loaded, false if stored.
+func (asl *AuthorizationServerList) LoadOrStore(key string, value AuthorizationServer) (actual AuthorizationServer, loaded bool) {
+	if actual, loaded = asl.Load(key); !loaded {
+		actual = value
+		asl.Store(key, actual)
+	} else {
+		log.Tracef("Using existing cache entry for Authorization Server: %v", actual.url)
+	}
+	return
+}
+
+// Store sets the value for a key.
+func (asl *AuthorizationServerList) Store(key string, value AuthorizationServer) {
+	asl.rwMutex.Lock()
+	defer asl.rwMutex.Unlock()
+	asl.authServers[key] = value
+	log.Infof("Authorization Server stored in the cache: %v", value.url)
+}
+
+//------------------------------------------------------------------------------

@@ -164,9 +164,8 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 		return
 	}
 	// Store the Authorization Server
-	_authServer, _ := uma.AuthorizationServers.LoadOrStore(authServerUrl, *uma.NewAuthorizationServer(authServerUrl))
-	authServer, ok := _authServer.(uma.AuthorizationServer)
-	if !ok || len(authServer.GetUrl()) == 0 {
+	authServer, _ := uma.AuthorizationServers.LoadOrStore(authServerUrl, *uma.NewAuthorizationServer(authServerUrl))
+	if len(authServer.GetUrl()) == 0 {
 		msg := "error getting the Authorization Server details"
 		log.Error(msg)
 		w.WriteHeader(http.StatusInternalServerError)
