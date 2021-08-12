@@ -17,6 +17,8 @@ docker tag ${REPOSITORY}:latest ${REPOSITORY}:${TAG}
 
 echo -e "\nCreated docker image: ${REPOSITORY}:latest => ${REPOSITORY}:${TAG}\n"
 
+docker system prune -f
+
 if test -n "${SUPPLIED_TAG}"; then
   echo "Pushing images..."
   docker push ${REPOSITORY}:latest

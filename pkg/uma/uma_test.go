@@ -38,6 +38,17 @@ func setup() {
 	log.Debugf("User ID token: %v", userIdToken)
 }
 
+// TestLookupAuthServer tests store and retrieve from the AuthServer cache
+func TestLookupAuthServer(t *testing.T) {
+	_authServer, _ := uma.AuthorizationServers.LoadOrStore(authServerUrl, *uma.NewAuthorizationServer(authServerUrl))
+	_authServer, ok := _authServer.(uma.AuthorizationServer)
+	if !ok {
+		t.Errorf("error getting the Authorization Server details")
+	} else {
+		t.Logf("successfully retrieved Authorization Server: %v", _authServer)
+	}
+}
+
 // TestGetTokenEndpoint tests getting the Token Endpoint from the Authorization Server
 func TestGetTokenEndpoint(t *testing.T) {
 	expectedTokenEndpointUrl := authServerUrl + "/oxauth/restv1/token"
