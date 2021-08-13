@@ -20,7 +20,10 @@ func main() {
 	// Register middlewares
 	router.Use(handler.RequestLogger)
 
-	// Register request handler
+	// Register request handler for status
+	handler.NewStatusRouter(router.PathPrefix("/status").Subrouter())
+
+	// Register request handler for auth_request
 	router.PathPrefix("").HandlerFunc(handler.NginxAuthRequestHandler)
 
 	// Start listening

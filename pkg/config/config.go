@@ -30,6 +30,7 @@ var defaults = Configuration{
 }
 
 func (config *Configuration) init() {
+	log.Info("Initialising the configuration")
 	config.ClientId = getClientId()
 	config.ClientSecret = getClientSecret()
 	config.HttpTimeout = getHttpTimeout()
@@ -37,6 +38,25 @@ func (config *Configuration) init() {
 	config.PepUrl = getPepUrl()
 	config.Port = getPort()
 	config.UserIdCookieName = getUserIdCookieName()
+}
+
+func (config *Configuration) ensureReady() {
+	interval := 10
+	go func() {
+		for !config.IsReady() {
+			log.Warnf("Config is not ready; retrying in %v seconds", interval)
+			time.Sleep(time.Second * time.Duration(interval))
+			config.init()
+		}
+		log.Info("Config is READY")
+	}()
+}
+
+func (config *Configuration) IsReady() (isReady bool) {
+	isReady = true &&
+		len(config.ClientId) > 0 &&
+		len(config.ClientSecret) > 0
+	return
 }
 
 func getClientId() string {

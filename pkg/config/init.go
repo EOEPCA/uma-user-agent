@@ -9,6 +9,8 @@ func init() {
 	Config.init()
 	// Logger
 	initLogger()
+	// Ensure the config is ready
+	Config.ensureReady()
 }
 
 func initLogger() {
