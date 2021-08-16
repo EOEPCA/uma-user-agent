@@ -9,6 +9,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// HTTP Header Names
+const headerNameXOriginalUri = "X-Original-Uri"
+const headerNameXOriginalMethod = "X-Original-Method"
+const headerNameXUserId = "X-User-Id"
+
 type ClientRequestDetails struct {
 	OrigUri     string
 	OrigMethod  string
@@ -78,9 +83,9 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details Clie
 	err = nil
 
 	// Gather expected info from headers/cookies
-	details.OrigUri = r.Header.Get("X-Original-Uri")
-	details.OrigMethod = r.Header.Get("X-Original-Method")
-	details.UserIdToken = r.Header.Get("X-User-Id")
+	details.OrigUri = r.Header.Get(headerNameXOriginalUri)
+	details.OrigMethod = r.Header.Get(headerNameXOriginalMethod)
+	details.UserIdToken = r.Header.Get(headerNameXUserId)
 	// If no user ID token in header, then fall back to cookie
 	if len(details.UserIdToken) == 0 {
 		c, err := r.Cookie(config.Config.UserIdCookieName)
@@ -94,9 +99,9 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details Clie
 		err = fmt.Errorf("mandatory header values missing")
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintln(w, "ERROR: Expecting non-zero values for the following data...")
-		fmt.Fprintln(w, "  Original URI:    ", details.OrigUri, "\n    [header X-Orig-Uri]")
-		fmt.Fprintln(w, "  Original Method: ", details.OrigMethod, "\n    [header X-Orig-Method]")
-		fmt.Fprintln(w, "  User ID Token:   ", details.UserIdToken, "\n    [header X-User-Id or cookie '"+config.Config.UserIdCookieName+"']")
+		fmt.Fprintln(w, "  Original URI:    ", details.OrigUri, "\n    [header ", headerNameXOriginalUri, "]")
+		fmt.Fprintln(w, "  Original Method: ", details.OrigMethod, "\n    [header ", headerNameXOriginalMethod, "]")
+		fmt.Fprintln(w, "  User ID Token:   ", details.UserIdToken, "\n    [header ", headerNameXUserId, " or cookie '"+config.Config.UserIdCookieName+"']")
 		return
 	}
 	log.Debug(fmt.Sprintf("Handling request: origUri: %v, origMethod: %v, userIdToken: %v", details.OrigUri, details.OrigMethod, details.UserIdToken))
@@ -116,9 +121,9 @@ func pepAuthRequest(details ClientRequestDetails) (response *http.Response, err 
 		log.Error(err)
 		return
 	}
-	pepReq.Header.Set("X-Orig-Uri", details.OrigUri)
-	pepReq.Header.Set("X-Orig-Method", details.OrigMethod)
-	pepReq.Header.Set("X-User-Id", details.UserIdToken)
+	pepReq.Header.Set(headerNameXOriginalUri, details.OrigUri)
+	pepReq.Header.Set(headerNameXOriginalMethod, details.OrigMethod)
+	pepReq.Header.Set(headerNameXUserId, details.UserIdToken)
 	if len(details.Rpt) > 0 {
 		pepReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", details.Rpt))
 	}
