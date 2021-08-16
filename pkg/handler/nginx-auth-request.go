@@ -99,9 +99,9 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details Clie
 		err = fmt.Errorf("mandatory header values missing")
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintln(w, "ERROR: Expecting non-zero values for the following data...")
-		fmt.Fprintln(w, "  Original URI:    ", details.OrigUri, "\n    [header ", headerNameXOriginalUri, "]")
-		fmt.Fprintln(w, "  Original Method: ", details.OrigMethod, "\n    [header ", headerNameXOriginalMethod, "]")
-		fmt.Fprintln(w, "  User ID Token:   ", details.UserIdToken, "\n    [header ", headerNameXUserId, " or cookie '"+config.Config.UserIdCookieName+"']")
+		fmt.Fprintf(w, "  Original URI:    %v\n    [header %v]\n", details.OrigUri, headerNameXOriginalUri)
+		fmt.Fprintf(w, "  Original Method: %v\n    [header %v]\n", details.OrigMethod, headerNameXOriginalMethod)
+		fmt.Fprintf(w, "  User ID Token:   %v\n    [header %v or cookie '%v']\n", details.UserIdToken, headerNameXUserId, config.Config.UserIdCookieName)
 		return
 	}
 	log.Debug(fmt.Sprintf("Handling request: origUri: %v, origMethod: %v, userIdToken: %v", details.OrigUri, details.OrigMethod, details.UserIdToken))
