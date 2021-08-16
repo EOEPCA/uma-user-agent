@@ -10,23 +10,25 @@ import (
 )
 
 type Configuration struct {
-	ClientId         string
-	ClientSecret     string
-	HttpTimeout      time.Duration
-	LogLevel         log.Level
-	PepUrl           string
-	Port             int
-	UserIdCookieName string
+	ClientId             string
+	ClientSecret         string
+	HttpTimeout          time.Duration
+	LogLevel             log.Level
+	PepUrl               string
+	Port                 int
+	UserIdCookieName     string
+	UnauthorizedResponse string
 }
 
 var defaults = Configuration{
-	ClientId:         "",
-	ClientSecret:     "",
-	HttpTimeout:      10,
-	LogLevel:         log.InfoLevel,
-	PepUrl:           "http://pep",
-	Port:             80,
-	UserIdCookieName: "auth_user_id",
+	ClientId:             "",
+	ClientSecret:         "",
+	HttpTimeout:          10,
+	LogLevel:             log.InfoLevel,
+	PepUrl:               "http://pep",
+	Port:                 80,
+	UserIdCookieName:     "auth_user_id",
+	UnauthorizedResponse: "Please login to access the resource",
 }
 
 func (config *Configuration) init() {
@@ -38,6 +40,7 @@ func (config *Configuration) init() {
 	config.PepUrl = getPepUrl()
 	config.Port = getPort()
 	config.UserIdCookieName = getUserIdCookieName()
+	config.UnauthorizedResponse = getUnauthorizedResponse()
 }
 
 func (config *Configuration) ensureReady() {
@@ -146,4 +149,15 @@ func getUserIdCookieName() string {
 		}
 	}
 	return userIdCookieName
+}
+
+func getUnauthorizedResponse() string {
+	unauthorizedResponse := defaults.UnauthorizedResponse
+	val, ok := os.LookupEnv("UNAUTHORIZED_RESPONSE")
+	if ok {
+		if len(val) > 0 {
+			unauthorizedResponse = val
+		}
+	}
+	return unauthorizedResponse
 }

@@ -36,7 +36,7 @@ func NginxAuthRequestHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		msg := "ERROR making naive call to the pep auth_request endpoint"
 		log.Error(msg, ": ", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 		return
 	}
@@ -60,7 +60,7 @@ func handlePepResponse(clientRequestDetails ClientRequestDetails, pepResponse *h
 		} else {
 			msg := "PEP responded UNAUTHORIZED"
 			log.Info(msg)
-			w.WriteHeader(code)
+			WriteHeaderUnauthorized(w)
 			fmt.Fprint(w, msg)
 		}
 	case code == 403:
@@ -73,7 +73,7 @@ func handlePepResponse(clientRequestDetails ClientRequestDetails, pepResponse *h
 		// UNEXPECTED
 		msg := fmt.Sprintf("Unexpected return code from PEP auth_request endpoint: %v", code)
 		log.Error(msg)
-		w.WriteHeader(http.StatusInternalServerError)
+		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 	}
 }
@@ -97,7 +97,7 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details Clie
 	// Check details are complete
 	if len(details.OrigUri) == 0 || len(details.OrigMethod) == 0 || len(details.UserIdToken) == 0 {
 		err = fmt.Errorf("mandatory header values missing")
-		w.WriteHeader(http.StatusBadRequest)
+		WriteHeaderUnauthorized(w)
 		fmt.Fprintln(w, "ERROR: Expecting non-zero values for the following data...")
 		fmt.Fprintf(w, "  Original URI:    %v\n    [header %v]\n", details.OrigUri, headerNameXOriginalUri)
 		fmt.Fprintf(w, "  Original Method: %v\n    [header %v]\n", details.OrigMethod, headerNameXOriginalMethod)
@@ -144,7 +144,7 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 	if pepUnauthResponse.StatusCode != http.StatusUnauthorized {
 		msg := "not an Unauthorized response"
 		log.Error(msg)
-		w.WriteHeader(http.StatusInternalServerError)
+		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 		return
 	}
@@ -154,7 +154,7 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 	if len(wwwAuthHeader) == 0 {
 		msg := "no Www-Authenticate header in PEP response"
 		log.Error(msg)
-		w.WriteHeader(http.StatusInternalServerError)
+		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 		return
 	}
@@ -164,7 +164,7 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 	if err != nil {
 		msg := "could not parse the Www-Authenticate header"
 		log.Error(msg, ": ", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 		return
 	}
@@ -173,7 +173,7 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 	if len(authServer.GetUrl()) == 0 {
 		msg := "error getting the Authorization Server details"
 		log.Error(msg)
-		w.WriteHeader(http.StatusInternalServerError)
+		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 		return
 	}
@@ -191,7 +191,7 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 		} else {
 			msg = "error getting RPT from Authorization Server"
 			log.Error(msg, ": ", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			WriteHeaderUnauthorized(w)
 		}
 		fmt.Fprint(w, msg)
 		return
@@ -202,11 +202,17 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 	if err != nil {
 		msg := "ERROR making call (with RPT) to the pep auth_request endpoint"
 		log.Error(msg, ": ", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 		return
 	}
 
 	// Handle the response
 	handlePepResponse(clientRequestDetails, pepResponse, nil, w, r)
+}
+
+// WriteHeaderUnauthorized writes the header response to indicate unauthorized
+func WriteHeaderUnauthorized(w http.ResponseWriter) {
+	w.Header().Set("Www-Authenticate", config.Config.UnauthorizedResponse)
+	w.WriteHeader(http.StatusUnauthorized)
 }
