@@ -180,11 +180,19 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 
 	// Exchange the ticket for an RPT at the Authorization Server
 	umaClient := &uma.UmaClient{Id: config.Config.ClientId, Secret: config.Config.ClientSecret}
-	clientRequestDetails.Rpt, err = umaClient.ExchangeTicketForRpt(authServer, clientRequestDetails.UserIdToken, ticket)
+	var forbidden bool
+	clientRequestDetails.Rpt, forbidden, err = umaClient.ExchangeTicketForRpt(authServer, clientRequestDetails.UserIdToken, ticket)
 	if err != nil {
-		msg := "error getting RPT from Authorization Server"
-		log.Error(msg, ": ", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		var msg string
+		if forbidden {
+			msg = "access request FORBIDDEN by Authorization Server"
+			log.Warn(msg, ": ", err)
+			w.WriteHeader(http.StatusForbidden)
+		} else {
+			msg = "error getting RPT from Authorization Server"
+			log.Error(msg, ": ", err)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 		fmt.Fprint(w, msg)
 		return
 	}

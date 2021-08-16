@@ -54,8 +54,9 @@ type UmaClient struct {
 }
 
 // ExchangeTicketForRpt exchanges the ticket for an RPT at the Authorization Server
-func (umaClient *UmaClient) ExchangeTicketForRpt(authServer AuthorizationServer, userIdToken string, ticket string) (rpt string, err error) {
+func (umaClient *UmaClient) ExchangeTicketForRpt(authServer AuthorizationServer, userIdToken string, ticket string) (rpt string, forbidden bool, err error) {
 	rpt = ""
+	forbidden = false
 	err = nil
 
 	// Get the token endpoint
@@ -96,8 +97,15 @@ func (umaClient *UmaClient) ExchangeTicketForRpt(authServer AuthorizationServer,
 		return
 	}
 	if response.StatusCode != http.StatusOK {
-		msg := fmt.Sprintf("unexpected response code '%v' from Token Endpoint: %v", response.StatusCode, tokenEndpoint)
-		log.Error(msg)
+		var msg string
+		if response.StatusCode == http.StatusForbidden {
+			forbidden = true
+			msg = fmt.Sprintf("access request is FORBIDDEN (403) by Token Endpoint: %v", tokenEndpoint)
+			log.Warn(msg)
+		} else {
+			msg = fmt.Sprintf("unexpected response code '%v' from Token Endpoint: %v", response.StatusCode, tokenEndpoint)
+			log.Error(msg)
+		}
 		err = fmt.Errorf(msg)
 		return
 	}
@@ -122,7 +130,7 @@ func (umaClient *UmaClient) ExchangeTicketForRpt(authServer AuthorizationServer,
 	}
 	rpt = bodyJson.AccessToken
 
-	return rpt, err
+	return rpt, forbidden, err
 }
 
 // GetUserIdTokenBasicAuth performs basic auth to obtain an ID token with the supplied credentials

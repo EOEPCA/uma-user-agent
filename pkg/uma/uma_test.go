@@ -11,7 +11,8 @@ import (
 )
 
 // Server and Client
-var authServerUrl = "https://test.185.52.193.87.nip.io"
+// var authServerUrl = "https://test.185.52.193.87.nip.io"
+var authServerUrl = "https://test.demo.eoepca.org"
 var authServer = uma.NewAuthorizationServer(authServerUrl)
 
 // var umaClient = uma.UmaClient{Id: "22ba0c56-9780-4b0b-ad71-d745c166ca3b", Secret: "0e3e1d0d-9002-4d44-bbff-a170efa18512"}
@@ -88,7 +89,7 @@ func TestUnpackWwwAuthenticateHeader(t *testing.T) {
 
 // TestExchangeTicketForRpt tests getting the RPT from the Token Endpoint using a Ticket
 func TestExchangeTicketForRpt(t *testing.T) {
-	rpt, err := umaClient.ExchangeTicketForRpt(*authServer, userIdToken, testTicket)
+	rpt, _, err := umaClient.ExchangeTicketForRpt(*authServer, userIdToken, testTicket)
 	if err != nil {
 		t.Error(err)
 	} else {
