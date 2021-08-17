@@ -51,6 +51,7 @@ func handlePepResponse(clientRequestDetails ClientRequestDetails, pepResponse *h
 		// AUTHORIZED
 		msg := fmt.Sprintf("PEP authorized the request with code: %v", code)
 		log.Info(msg)
+		w.Header().Set(headerNameXUserId, clientRequestDetails.UserIdToken)
 		w.WriteHeader(code)
 		fmt.Fprint(w, msg)
 	case code == 401:
