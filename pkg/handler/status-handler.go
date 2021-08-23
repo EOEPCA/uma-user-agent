@@ -13,7 +13,7 @@ func NewStatusRouter(router *mux.Router) *mux.Router {
 
 	// Readiness
 	router.PathPrefix("/ready").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if config.Config.IsReady() {
+		if config.IsReady() {
 			fmt.Fprintln(w, "READY")
 		} else {
 			w.WriteHeader(http.StatusTooEarly)

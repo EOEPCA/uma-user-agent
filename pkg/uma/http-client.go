@@ -8,5 +8,5 @@ import (
 )
 
 var HttpClient = &http.Client{
-	Timeout: time.Second * config.Config.HttpTimeout,
+	Timeout: time.Second * config.GetHttpTimeout(),
 }

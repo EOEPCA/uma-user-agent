@@ -89,7 +89,7 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details Clie
 	details.UserIdToken = r.Header.Get(headerNameXUserId)
 	// If no user ID token in header, then fall back to cookie
 	if len(details.UserIdToken) == 0 {
-		c, err := r.Cookie(config.Config.UserIdCookieName)
+		c, err := r.Cookie(config.GetUserIdCookieName())
 		if err == nil {
 			details.UserIdToken = c.Value
 		}
@@ -102,7 +102,7 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details Clie
 		fmt.Fprintln(w, "ERROR: Expecting non-zero values for the following data...")
 		fmt.Fprintf(w, "  Original URI:    %v\n    [header %v]\n", details.OrigUri, headerNameXOriginalUri)
 		fmt.Fprintf(w, "  Original Method: %v\n    [header %v]\n", details.OrigMethod, headerNameXOriginalMethod)
-		fmt.Fprintf(w, "  User ID Token:   %v\n    [header %v or cookie '%v']\n", details.UserIdToken, headerNameXUserId, config.Config.UserIdCookieName)
+		fmt.Fprintf(w, "  User ID Token:   %v\n    [header %v or cookie '%v']\n", details.UserIdToken, headerNameXUserId, config.GetUserIdCookieName())
 		return
 	}
 	log.Debug(fmt.Sprintf("Handling request: origUri: %v, origMethod: %v, userIdToken: %v", details.OrigUri, details.OrigMethod, details.UserIdToken))
@@ -116,7 +116,7 @@ func pepAuthRequest(details ClientRequestDetails) (response *http.Response, err 
 	err = nil
 
 	// Prepare the request
-	pepReq, err := http.NewRequest("GET", config.Config.PepUrl, nil)
+	pepReq, err := http.NewRequest("GET", config.GetPepUrl(), nil)
 	if err != nil {
 		err = fmt.Errorf("error establishing request for PEP: %w", err)
 		log.Error(err)
@@ -180,7 +180,7 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 	}
 
 	// Exchange the ticket for an RPT at the Authorization Server
-	umaClient := &uma.UmaClient{Id: config.Config.ClientId, Secret: config.Config.ClientSecret}
+	umaClient := &uma.UmaClient{Id: config.GetClientId(), Secret: config.GetClientSecret()}
 	var forbidden bool
 	clientRequestDetails.Rpt, forbidden, err = umaClient.ExchangeTicketForRpt(authServer, clientRequestDetails.UserIdToken, ticket)
 	if err != nil {
@@ -214,6 +214,6 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 
 // WriteHeaderUnauthorized writes the header response to indicate unauthorized
 func WriteHeaderUnauthorized(w http.ResponseWriter) {
-	w.Header().Set("Www-Authenticate", config.Config.UnauthorizedResponse)
+	w.Header().Set("Www-Authenticate", config.GetUnauthorizedResponse())
 	w.WriteHeader(http.StatusUnauthorized)
 }

@@ -16,7 +16,7 @@ var authServerUrl = "https://test.demo.eoepca.org"
 var authServer = uma.NewAuthorizationServer(authServerUrl)
 
 // var umaClient = uma.UmaClient{Id: "22ba0c56-9780-4b0b-ad71-d745c166ca3b", Secret: "0e3e1d0d-9002-4d44-bbff-a170efa18512"}
-var umaClient = uma.UmaClient{Id: config.Config.ClientId, Secret: config.Config.ClientSecret}
+var umaClient = uma.UmaClient{Id: config.GetClientId(), Secret: config.GetClientSecret()}
 
 // Test data
 var username = "eric"

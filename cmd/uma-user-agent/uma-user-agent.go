@@ -27,7 +27,7 @@ func main() {
 	router.PathPrefix("").HandlerFunc(handler.NginxAuthRequestHandler)
 
 	// Start listening
-	port := config.Config.Port
+	port := config.GetPort()
 	log.Info("Begin listening on port ", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), router))
 }

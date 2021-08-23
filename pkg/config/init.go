@@ -2,20 +2,17 @@ package config
 
 import log "github.com/sirupsen/logrus"
 
-var Config = Configuration{}
-
 func init() {
-	// Load the config values
-	Config.init()
+	// NEW - file-based config approach
+	viperInit()
+
 	// Logger
 	initLogger()
-	// Ensure the config is ready
-	Config.ensureReady()
 }
 
 func initLogger() {
 	// log level
-	log.SetLevel(Config.LogLevel)
+	log.SetLevel(GetLogLevel())
 
 	// log format
 	logFormatter := new(log.TextFormatter)
