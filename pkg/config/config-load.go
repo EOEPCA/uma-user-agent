@@ -35,8 +35,8 @@ var clientConfigKeys = []configKey{keyClientId, keyClientSecret}
 var appConfigKeys = []configKey{}
 
 // Init
-func viperInit() {
-	log.Info("Initialising the viper configuration")
+func configInit() {
+	log.Info("Initialising the configuration from file")
 
 	// Get config directory from env
 	configDir := defaultConfigDir
@@ -50,8 +50,8 @@ func viperInit() {
 	// Init config from files
 	clientConfigLoaded := make(chan bool)
 	appConfigLoaded := make(chan bool)
-	go configInit(clientConfig, "client", configDir, clientConfigKeys, clientConfigLoaded)
-	go configInit(appConfig, "config", configDir, appConfigKeys, appConfigLoaded)
+	go configInitFromFile(clientConfig, "client", configDir, clientConfigKeys, clientConfigLoaded)
+	go configInitFromFile(appConfig, "config", configDir, appConfigKeys, appConfigLoaded)
 	if <-clientConfigLoaded {
 		log.Info("Client configuration loaded successfully")
 	}
@@ -61,7 +61,7 @@ func viperInit() {
 }
 
 // Init config from files
-func configInit(v *viper.Viper, configName string, configDir string, configKeys []configKey, loaded chan bool) {
+func configInitFromFile(v *viper.Viper, configName string, configDir string, configKeys []configKey, loaded chan bool) {
 	// File location
 	v.SetConfigName(configName)
 	v.AddConfigPath(configDir)

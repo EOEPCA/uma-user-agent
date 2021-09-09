@@ -6,8 +6,8 @@ func init() {
 	// Logger
 	initLogger()
 
-	// NEW - file-based config approach
-	viperInit()
+	// Load config from files
+	configInit()
 
 	// log level - from config-specified value
 	log.SetLevel(GetLogLevel())
