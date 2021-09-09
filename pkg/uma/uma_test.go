@@ -7,7 +7,7 @@ import (
 
 	"github.com/EOEPCA/uma-user-agent/pkg/config"
 	"github.com/EOEPCA/uma-user-agent/pkg/uma"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // Server and Client
@@ -34,9 +34,9 @@ func setup() {
 	var err error
 	userIdToken, err = umaClient.GetUserIdTokenBasicAuth(*authServer, username, password)
 	if err != nil {
-		log.Errorf("Could not initialise user ID token: %v", err)
+		logrus.Errorf("Could not initialise user ID token: %v", err)
 	}
-	log.Debugf("User ID token: %v", userIdToken)
+	logrus.Debugf("User ID token: %v", userIdToken)
 }
 
 // TestLookupAuthServer tests store and retrieve from the AuthServer cache

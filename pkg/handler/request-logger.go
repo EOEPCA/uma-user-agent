@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/handlers"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // RequestLogger provides a request logging middleware.
@@ -15,7 +15,7 @@ import (
 func RequestLogger(h http.Handler) (handler http.Handler) {
 	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Suppress logging the path '/status/' (unless we have verbose logging enabled)
-		if log.GetLevel() == log.TraceLevel || !strings.HasPrefix(r.URL.Path, "/status/") {
+		if logrus.GetLevel() == logrus.TraceLevel || !strings.HasPrefix(r.URL.Path, "/status/") {
 			handlers.CombinedLoggingHandler(os.Stdout, h).ServeHTTP(w, r)
 		} else {
 			h.ServeHTTP(w, r)

@@ -10,7 +10,7 @@ import (
 	"github.com/EOEPCA/uma-user-agent/pkg/config"
 	"github.com/EOEPCA/uma-user-agent/pkg/handler"
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func configSummry() {
@@ -23,7 +23,7 @@ func configSummry() {
 }
 
 func main() {
-	log.Info(filepath.Base(os.Args[0]), " STARTING")
+	logrus.Info(filepath.Base(os.Args[0]), " STARTING")
 
 	configSummry()
 
@@ -40,6 +40,6 @@ func main() {
 
 	// Start listening
 	port := config.GetPort()
-	log.Info("Begin listening on port ", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), router))
+	logrus.Info("Begin listening on port ", port)
+	logrus.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), router))
 }

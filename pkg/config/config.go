@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func IsReady() (isReady bool) {
@@ -26,24 +26,24 @@ func GetHttpTimeout() time.Duration {
 	return appConfig.GetDuration(keyHttpTimeout.key)
 }
 
-func GetLogLevel() log.Level {
+func GetLogLevel() logrus.Level {
 	// default
-	var logLevel log.Level
+	var logLevel logrus.Level
 	var ok bool
-	if logLevel, ok = keyLoggingLevel.defval.(log.Level); !ok {
-		logLevel = log.InfoLevel
+	if logLevel, ok = keyLoggingLevel.defval.(logrus.Level); !ok {
+		logLevel = logrus.InfoLevel
 	}
 
 	// read from config
 	val := appConfig.GetString(keyLoggingLevel.key)
-	l, err := log.ParseLevel(val)
+	l, err := logrus.ParseLevel(val)
 	if err != nil {
-		log.Warning(fmt.Sprintf("Bad log level '%v' specified, using default '%v'", val, logLevel.String()))
+		logrus.Warning(fmt.Sprintf("Bad log level '%v' specified, using default '%v'", val, logLevel.String()))
 	} else {
 		logLevel = l
 	}
 
-	log.Info("Using log level: ", logLevel.String())
+	logrus.Info("Using log level: ", logLevel.String())
 	return logLevel
 }
 

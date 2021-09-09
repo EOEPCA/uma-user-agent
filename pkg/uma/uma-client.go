@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 //------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ func (umaClient *UmaClient) ExchangeTicketForRpt(authServer AuthorizationServer,
 	tokenEndpoint, err := authServer.GetTokenEndpoint()
 	if err != nil {
 		msg := "error getting token endpoint for Authorization Server: " + authServer.url
-		log.Error(msg, ": ", err)
+		logrus.Error(msg, ": ", err)
 		err = fmt.Errorf(msg+": %w", err)
 		return
 	}
@@ -80,7 +80,7 @@ func (umaClient *UmaClient) ExchangeTicketForRpt(authServer AuthorizationServer,
 	request, err := http.NewRequest("POST", tokenEndpoint, strings.NewReader(data.Encode()))
 	if err != nil {
 		msg := "error preparing request to Token Endpoint: " + tokenEndpoint
-		log.Error(msg, ": ", err)
+		logrus.Error(msg, ": ", err)
 		err = fmt.Errorf(msg+": %w", err)
 		return
 	}
@@ -88,11 +88,11 @@ func (umaClient *UmaClient) ExchangeTicketForRpt(authServer AuthorizationServer,
 	request.Header.Set("Cache-Control", "no-cache")
 
 	// Make the request
-	log.Debug("Requesting RPT from token endpoint: ", tokenEndpoint)
+	logrus.Debug("Requesting RPT from token endpoint: ", tokenEndpoint)
 	response, err := HttpClient.Do(request)
 	if err != nil {
 		msg := "error making request to Token Endpoint: " + tokenEndpoint
-		log.Error(msg, ": ", err)
+		logrus.Error(msg, ": ", err)
 		err = fmt.Errorf(msg+": %w", err)
 		return
 	}
@@ -101,10 +101,10 @@ func (umaClient *UmaClient) ExchangeTicketForRpt(authServer AuthorizationServer,
 		if response.StatusCode == http.StatusForbidden {
 			forbidden = true
 			msg = fmt.Sprintf("access request is FORBIDDEN (403) by Token Endpoint: %v", tokenEndpoint)
-			log.Warn(msg)
+			logrus.Warn(msg)
 		} else {
 			msg = fmt.Sprintf("unexpected response code '%v' from Token Endpoint: %v", response.StatusCode, tokenEndpoint)
-			log.Error(msg)
+			logrus.Error(msg)
 		}
 		err = fmt.Errorf(msg)
 		return
@@ -142,7 +142,7 @@ func (umaClient *UmaClient) GetUserIdTokenBasicAuth(authServer AuthorizationServ
 	tokenEndpoint, err := authServer.GetTokenEndpoint()
 	if err != nil {
 		msg := "error getting token endpoint for Authorization Server: " + authServer.url
-		log.Error(msg, ": ", err)
+		logrus.Error(msg, ": ", err)
 		err = fmt.Errorf(msg+": %w", err)
 		return
 	}
@@ -158,7 +158,7 @@ func (umaClient *UmaClient) GetUserIdTokenBasicAuth(authServer AuthorizationServ
 	request, err := http.NewRequest("POST", tokenEndpoint, strings.NewReader(data.Encode()))
 	if err != nil {
 		msg := "error preparing request to Token Endpoint: " + tokenEndpoint
-		log.Error(msg, ": ", err)
+		logrus.Error(msg, ": ", err)
 		err = fmt.Errorf(msg+": %w", err)
 		return
 	}
@@ -166,17 +166,17 @@ func (umaClient *UmaClient) GetUserIdTokenBasicAuth(authServer AuthorizationServ
 	request.Header.Set("Cache-Control", "no-cache")
 
 	// Make the request
-	log.Debug("Requesting User ID Token from token endpoint: ", tokenEndpoint)
+	logrus.Debug("Requesting User ID Token from token endpoint: ", tokenEndpoint)
 	response, err := HttpClient.Do(request)
 	if err != nil {
 		msg := "error making request to Token Endpoint: " + tokenEndpoint
-		log.Error(msg, ": ", err)
+		logrus.Error(msg, ": ", err)
 		err = fmt.Errorf(msg+": %w", err)
 		return
 	}
 	if response.StatusCode != http.StatusOK {
 		msg := fmt.Sprintf("unexpected response code '%v' from Token Endpoint: %v", response.StatusCode, tokenEndpoint)
-		log.Error(msg)
+		logrus.Error(msg)
 		err = fmt.Errorf(msg)
 		return
 	}

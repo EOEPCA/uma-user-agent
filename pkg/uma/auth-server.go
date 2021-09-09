@@ -6,7 +6,7 @@ import (
 	"io"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 var AuthorizationServers = NewAuthorizationServerList()
@@ -127,7 +127,7 @@ func (asl *AuthorizationServerList) LoadOrStore(key string, value AuthorizationS
 		actual = value
 		asl.Store(key, actual)
 	} else {
-		log.Tracef("Using existing cache entry for Authorization Server: %v", actual.url)
+		logrus.Tracef("Using existing cache entry for Authorization Server: %v", actual.url)
 	}
 	return
 }
@@ -137,7 +137,7 @@ func (asl *AuthorizationServerList) Store(key string, value AuthorizationServer)
 	asl.rwMutex.Lock()
 	defer asl.rwMutex.Unlock()
 	asl.authServers[key] = value
-	log.Infof("Authorization Server stored in the cache: %v", value.url)
+	logrus.Infof("Authorization Server stored in the cache: %v", value.url)
 }
 
 //------------------------------------------------------------------------------

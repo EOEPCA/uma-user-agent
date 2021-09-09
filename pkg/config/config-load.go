@@ -4,7 +4,7 @@ import (
 	"os"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -21,7 +21,7 @@ type configKey struct {
 // Config keys with default values
 var keyClientId = configKey{"client-id", ""}
 var keyClientSecret = configKey{"client-secret", ""}
-var keyLoggingLevel = configKey{"logging.level", log.InfoLevel}
+var keyLoggingLevel = configKey{"logging.level", logrus.InfoLevel}
 var keyHttpTimeout = configKey{"network.httpTimeout", 10}
 var keyListenPort = configKey{"network.listenPort", 80}
 var keyPepUrl = configKey{"pep.url", "http://pep"}
@@ -36,7 +36,7 @@ var appConfigKeys = []configKey{}
 
 // Init
 func configInit() {
-	log.Info("Initialising the configuration from file")
+	logrus.Info("Initialising the configuration from file")
 
 	// Get config directory from env
 	configDir := defaultConfigDir
@@ -53,10 +53,10 @@ func configInit() {
 	go configInitFromFile(clientConfig, "client", configDir, clientConfigKeys, clientConfigLoaded)
 	go configInitFromFile(appConfig, "config", configDir, appConfigKeys, appConfigLoaded)
 	if <-clientConfigLoaded {
-		log.Info("Client configuration loaded successfully")
+		logrus.Info("Client configuration loaded successfully")
 	}
 	if <-appConfigLoaded {
-		log.Info("Application configuration loaded successfully")
+		logrus.Info("Application configuration loaded successfully")
 	}
 }
 
@@ -75,11 +75,11 @@ func configInitFromFile(v *viper.Viper, configName string, configDir string, con
 	var err error
 	for err = v.ReadInConfig(); err != nil; {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Warn(err)
+			logrus.Warn(err)
 			time.Sleep(time.Second * 5)
 			err = v.ReadInConfig()
 		} else {
-			log.Error(err)
+			logrus.Error(err)
 			break
 		}
 	}

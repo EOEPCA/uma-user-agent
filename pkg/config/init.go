@@ -1,6 +1,6 @@
 package config
 
-import log "github.com/sirupsen/logrus"
+import "github.com/sirupsen/logrus"
 
 func init() {
 	// Logger
@@ -10,13 +10,13 @@ func init() {
 	configInit()
 
 	// log level - from config-specified value
-	log.SetLevel(GetLogLevel())
+	logrus.SetLevel(GetLogLevel())
 }
 
 func initLogger() {
 	// log format
-	logFormatter := new(log.TextFormatter)
+	logFormatter := new(logrus.TextFormatter)
 	logFormatter.TimestampFormat = "2006-01-02 15:04:05.000"
-	log.SetFormatter(logFormatter)
+	logrus.SetFormatter(logFormatter)
 	logFormatter.FullTimestamp = true
 }
