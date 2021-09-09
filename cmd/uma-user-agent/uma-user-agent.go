@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/EOEPCA/uma-user-agent/pkg/config"
 	"github.com/EOEPCA/uma-user-agent/pkg/handler"
@@ -12,8 +13,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func configSummry() {
+	go func() {
+		for {
+			fmt.Println("client-id =", config.GetClientId())
+			time.Sleep(time.Second * 2)
+		}
+	}()
+}
+
 func main() {
 	log.Info(filepath.Base(os.Args[0]), " STARTING")
+
+	configSummry()
 
 	router := mux.NewRouter()
 

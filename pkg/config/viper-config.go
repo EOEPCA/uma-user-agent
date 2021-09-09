@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -47,12 +48,20 @@ func viperInit() {
 	}
 
 	// Init config from files
-	configInit(clientConfig, "client", configDir, clientConfigKeys)
-	configInit(appConfig, "config", configDir, appConfigKeys)
+	clientConfigLoaded := make(chan bool)
+	appConfigLoaded := make(chan bool)
+	go configInit(clientConfig, "client", configDir, clientConfigKeys, clientConfigLoaded)
+	go configInit(appConfig, "config", configDir, appConfigKeys, appConfigLoaded)
+	if <-clientConfigLoaded {
+		log.Info("Client configuration loaded successfully")
+	}
+	if <-appConfigLoaded {
+		log.Info("Application configuration loaded successfully")
+	}
 }
 
 // Init config from files
-func configInit(v *viper.Viper, configName string, configDir string, configKeys []configKey) {
+func configInit(v *viper.Viper, configName string, configDir string, configKeys []configKey, loaded chan bool) {
 	// File location
 	v.SetConfigName(configName)
 	v.AddConfigPath(configDir)
@@ -63,8 +72,23 @@ func configInit(v *viper.Viper, configName string, configDir string, configKeys 
 	}
 
 	// Load
-	v.ReadInConfig()
+	var err error
+	for err = v.ReadInConfig(); err != nil; {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Warn(err)
+			time.Sleep(time.Second * 5)
+			err = v.ReadInConfig()
+		} else {
+			log.Error(err)
+			break
+		}
+	}
+
+	// Signal the loaded status
+	loaded <- (err == nil)
 
 	// Watch
-	v.WatchConfig()
+	if err == nil {
+		v.WatchConfig()
+	}
 }
