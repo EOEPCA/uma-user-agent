@@ -15,3 +15,6 @@
 # vendor/
 
 tmp/
+
+client.yaml
+config.yaml
