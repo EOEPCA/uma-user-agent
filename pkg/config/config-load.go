@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -89,6 +90,10 @@ func configInitFromFile(v *viper.Viper, configName string, configDir string, con
 
 	// Watch
 	if err == nil {
+		v.OnConfigChange(func(in fsnotify.Event) {
+			logrus.Warn("Config has changed")
+			go logrus.SetLevel(GetLogLevel())
+		})
 		v.WatchConfig()
 	}
 }
