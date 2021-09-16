@@ -14,6 +14,7 @@ const headerNameXOriginalUri = "X-Original-Uri"
 const headerNameXOriginalMethod = "X-Original-Method"
 const headerNameXUserId = "X-User-Id"
 
+// ClientRequestDetails represents the details of the 'incoming' request made by the client
 type ClientRequestDetails struct {
 	OrigUri     string
 	OrigMethod  string
@@ -21,21 +22,48 @@ type ClientRequestDetails struct {
 	Rpt         string
 }
 
+// wrappedResponseWriter provides access to the StatusCode that is written to the http header,
+// for the purposes of request logging
+type wrappedResponseWriter struct {
+	http.ResponseWriter
+	StatusCode int
+}
+
+// Override (wrap) the WriteHeader function to take a note of the status code - exposed via
+// a public (exported) value.
+func (rl *wrappedResponseWriter) WriteHeader(statusCode int) {
+	rl.ResponseWriter.WriteHeader(statusCode)
+	rl.StatusCode = statusCode
+}
+
+// Helper function to log the request completion including the status code.
+func (rl *wrappedResponseWriter) LogRequestCompletion(requestLogger *logrus.Entry) {
+	requestLogger.WithField("statusCode", rl.StatusCode).Info("Request complete")
+}
+
+// pepResponseHandlerFunc defines the function prototype for functions able to
+// handle the response to an `auth_request` made to the PEP
 type pepResponseHandlerFunc func(ClientRequestDetails, *http.Response, http.ResponseWriter, *http.Request)
 
-func NginxAuthRequestHandler(w http.ResponseWriter, r *http.Request) {
+// NginxAuthRequestHandler is the entrypoint handler for the nginx `auth_request` implementation
+func NginxAuthRequestHandler(rw http.ResponseWriter, r *http.Request) {
+	w := &wrappedResponseWriter{rw, http.StatusOK}
+
 	// Gather expected info from headers/cookies
-	clientRequestDetails, err := processRequestHeaders(w, r)
+	r, clientRequestDetails, err := processRequestHeaders(w, r)
+	requestLogger := GetRequestLogger(r.Context())
+	defer w.LogRequestCompletion(requestLogger)
 	if err != nil {
-		logrus.Error("ERROR processing request headers: ", err)
+		requestLogger.Error("ERROR processing request headers: ", err)
 		return
 	}
+	requestLogger.Debug("START handling new request")
 
 	// Naive call to the PEP
 	pepResponse, err := pepAuthRequest(clientRequestDetails)
 	if err != nil {
 		msg := "ERROR making naive call to the pep auth_request endpoint"
-		logrus.Error(msg, ": ", err)
+		requestLogger.Error(fmt.Errorf("%s: %w", msg, err))
 		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 		return
@@ -45,12 +73,14 @@ func NginxAuthRequestHandler(w http.ResponseWriter, r *http.Request) {
 	handlePepResponse(clientRequestDetails, pepResponse, handlePepNaiveUnauthorized, w, r)
 }
 
+// handlePepResponse is a helper function to handle the response from the PEP's `auth_request` endpoint
 func handlePepResponse(clientRequestDetails ClientRequestDetails, pepResponse *http.Response, unauthResponseHandler pepResponseHandlerFunc, w http.ResponseWriter, r *http.Request) {
+	requestLogger := GetRequestLogger(r.Context())
 	switch code := pepResponse.StatusCode; {
 	case code >= 200 && code <= 299:
 		// AUTHORIZED
 		msg := fmt.Sprintf("PEP authorized the request with code: %v", code)
-		logrus.Info(msg)
+		requestLogger.Debug(msg)
 		w.Header().Set(headerNameXUserId, clientRequestDetails.UserIdToken)
 		w.WriteHeader(code)
 		fmt.Fprint(w, msg)
@@ -60,26 +90,29 @@ func handlePepResponse(clientRequestDetails ClientRequestDetails, pepResponse *h
 			unauthResponseHandler(clientRequestDetails, pepResponse, w, r)
 		} else {
 			msg := "PEP responded UNAUTHORIZED"
-			logrus.Info(msg)
+			requestLogger.Debug(msg)
 			WriteHeaderUnauthorized(w)
 			fmt.Fprint(w, msg)
 		}
 	case code == 403:
 		// FORBIDDEN
 		msg := "PEP responded FORBIDDEN"
-		logrus.Info(msg)
+		requestLogger.Debug(msg)
 		w.WriteHeader(code)
 		fmt.Fprint(w, msg)
 	default:
 		// UNEXPECTED
 		msg := fmt.Sprintf("Unexpected return code from PEP auth_request endpoint: %v", code)
-		logrus.Error(msg)
+		requestLogger.Error(msg)
 		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 	}
 }
 
-func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details ClientRequestDetails, err error) {
+// processRequestHeaders is a helper function to extract the expected information from the
+// http headers of the received `auth_request`
+func processRequestHeaders(w http.ResponseWriter, r *http.Request) (reqUpdated *http.Request, details ClientRequestDetails, err error) {
+	reqUpdated = r
 	details = ClientRequestDetails{}
 	err = nil
 
@@ -95,6 +128,13 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details Clie
 		}
 	}
 
+	// Update the request context with the supplied headers
+	r = UpdateRequestWithDetails(r, details)
+	reqUpdated = r
+
+	// Get the request logger
+	requestLogger := GetRequestLogger(reqUpdated.Context())
+
 	// Check details are complete
 	if len(details.OrigUri) == 0 || len(details.OrigMethod) == 0 || len(details.UserIdToken) == 0 {
 		err = fmt.Errorf("mandatory header values missing")
@@ -105,7 +145,7 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details Clie
 		fmt.Fprintf(w, "  User ID Token:   %v\n    [header %v or cookie '%v']\n", details.UserIdToken, headerNameXUserId, config.GetUserIdCookieName())
 		return
 	}
-	logrus.Debug(fmt.Sprintf("Handling request: origUri: %v, origMethod: %v, userIdToken: %v", details.OrigUri, details.OrigMethod, details.UserIdToken))
+	requestLogger.Trace(fmt.Sprintf("Handling request: origUri: %v, origMethod: %v, userIdToken: %v", details.OrigUri, details.OrigMethod, details.UserIdToken))
 
 	return
 }
@@ -119,7 +159,6 @@ func pepAuthRequest(details ClientRequestDetails) (response *http.Response, err 
 	pepReq, err := http.NewRequest("GET", config.GetPepUrl(), nil)
 	if err != nil {
 		err = fmt.Errorf("error establishing request for PEP: %w", err)
-		logrus.Error(err)
 		return
 	}
 	pepReq.Header.Set(headerNameXOriginalUri, details.OrigUri)
@@ -134,17 +173,19 @@ func pepAuthRequest(details ClientRequestDetails) (response *http.Response, err 
 	if err != nil {
 		response = nil
 		err = fmt.Errorf("error requesting auth from PEP: %w", err)
-		logrus.Error(err)
 	}
 
 	return response, err
 }
 
+// handlePepNaiveUnauthorized provides the behaviour that is triggered by a 401 (Unauthorized)
+// response to a naive (no RPT) request to the PEP `auth_request` endpoint
 func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUnauthResponse *http.Response, w http.ResponseWriter, r *http.Request) {
+	requestLogger := GetRequestLogger(r.Context())
 	// Check that this is a 401 response
 	if pepUnauthResponse.StatusCode != http.StatusUnauthorized {
 		msg := "not an Unauthorized response"
-		logrus.Error(msg)
+		requestLogger.Error(msg)
 		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 		return
@@ -154,7 +195,7 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 	wwwAuthHeader := pepUnauthResponse.Header.Get("Www-Authenticate")
 	if len(wwwAuthHeader) == 0 {
 		msg := "no Www-Authenticate header in PEP response"
-		logrus.Error(msg)
+		requestLogger.Error(msg)
 		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 		return
@@ -164,16 +205,16 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 	authServerUrl, ticket, err := uma.UnpackWwwAuthenticateHeader(wwwAuthHeader)
 	if err != nil {
 		msg := "could not parse the Www-Authenticate header"
-		logrus.Error(msg, ": ", err)
+		requestLogger.Error(fmt.Errorf("%s: %w", msg, err))
 		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 		return
 	}
 	// Store the Authorization Server
-	authServer, _ := uma.AuthorizationServers.LoadOrStore(authServerUrl, *uma.NewAuthorizationServer(authServerUrl))
+	authServer, _ := uma.AuthorizationServers.LoadOrStore(requestLogger, authServerUrl, *uma.NewAuthorizationServer(authServerUrl))
 	if len(authServer.GetUrl()) == 0 {
 		msg := "error getting the Authorization Server details"
-		logrus.Error(msg)
+		requestLogger.Error(msg)
 		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 		return
@@ -182,16 +223,16 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 	// Exchange the ticket for an RPT at the Authorization Server
 	umaClient := &uma.UmaClient{Id: config.GetClientId(), Secret: config.GetClientSecret()}
 	var forbidden bool
-	clientRequestDetails.Rpt, forbidden, err = umaClient.ExchangeTicketForRpt(authServer, clientRequestDetails.UserIdToken, ticket)
+	clientRequestDetails.Rpt, forbidden, err = umaClient.ExchangeTicketForRpt(requestLogger, authServer, clientRequestDetails.UserIdToken, ticket)
 	if err != nil {
 		var msg string
 		if forbidden {
 			msg = "access request FORBIDDEN by Authorization Server"
-			logrus.Warn(msg, ": ", err)
+			requestLogger.Warn(fmt.Errorf("%s: %w", msg, err))
 			w.WriteHeader(http.StatusForbidden)
 		} else {
 			msg = "error getting RPT from Authorization Server"
-			logrus.Error(msg, ": ", err)
+			requestLogger.Error(fmt.Errorf("%s: %w", msg, err))
 			WriteHeaderUnauthorized(w)
 		}
 		fmt.Fprint(w, msg)
@@ -202,7 +243,7 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 	pepResponse, err := pepAuthRequest(clientRequestDetails)
 	if err != nil {
 		msg := "ERROR making call (with RPT) to the pep auth_request endpoint"
-		logrus.Error(msg, ": ", err)
+		requestLogger.Error(fmt.Errorf("%s: %w", msg, err))
 		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 		return

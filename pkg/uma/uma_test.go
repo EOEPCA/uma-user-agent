@@ -24,6 +24,8 @@ var password = "defaultPWD"
 var userIdToken = ""
 var testTicket = "b33f6aff-ac5c-403f-96aa-b1aff58488cf"
 
+var testLogger = logrus.NewEntry(logrus.New())
+
 // TestMain performs testing setup
 func TestMain(m *testing.M) {
 	setup()
@@ -32,17 +34,17 @@ func TestMain(m *testing.M) {
 
 func setup() {
 	var err error
-	userIdToken, err = umaClient.GetUserIdTokenBasicAuth(*authServer, username, password)
+	userIdToken, err = umaClient.GetUserIdTokenBasicAuth(testLogger, *authServer, username, password)
 	if err != nil {
-		logrus.Errorf("Could not initialise user ID token: %v", err)
+		testLogger.Errorf("Could not initialise user ID token: %v", err)
 	}
-	logrus.Debugf("User ID token: %v", userIdToken)
+	testLogger.Debugf("User ID token: %v", userIdToken)
 }
 
 // TestLookupAuthServer tests store and retrieve from the AuthServer cache
 func TestLookupAuthServer(t *testing.T) {
 	doLoadOrStore := func(context string, expectLoaded bool) {
-		_authServer, loaded := uma.AuthorizationServers.LoadOrStore(authServerUrl, *uma.NewAuthorizationServer(authServerUrl))
+		_authServer, loaded := uma.AuthorizationServers.LoadOrStore(testLogger, authServerUrl, *uma.NewAuthorizationServer(authServerUrl))
 		if len(_authServer.GetUrl()) == 0 {
 			t.Errorf("[%v] error getting the Authorization Server details", context)
 		} else if loaded != expectLoaded {
@@ -89,7 +91,7 @@ func TestUnpackWwwAuthenticateHeader(t *testing.T) {
 
 // TestExchangeTicketForRpt tests getting the RPT from the Token Endpoint using a Ticket
 func TestExchangeTicketForRpt(t *testing.T) {
-	rpt, _, err := umaClient.ExchangeTicketForRpt(*authServer, userIdToken, testTicket)
+	rpt, _, err := umaClient.ExchangeTicketForRpt(testLogger, *authServer, userIdToken, testTicket)
 	if err != nil {
 		t.Error(err)
 	} else {

@@ -122,22 +122,22 @@ func (asl *AuthorizationServerList) LoadAndDelete(key string) (value Authorizati
 // LoadOrStore returns the existing value for the key if present.
 // Otherwise, it stores and returns the given value.
 // The loaded result is true if the value was loaded, false if stored.
-func (asl *AuthorizationServerList) LoadOrStore(key string, value AuthorizationServer) (actual AuthorizationServer, loaded bool) {
+func (asl *AuthorizationServerList) LoadOrStore(requestLogger *logrus.Entry, key string, value AuthorizationServer) (actual AuthorizationServer, loaded bool) {
 	if actual, loaded = asl.Load(key); !loaded {
 		actual = value
-		asl.Store(key, actual)
+		asl.Store(requestLogger, key, actual)
 	} else {
-		logrus.Tracef("Using existing cache entry for Authorization Server: %v", actual.url)
+		requestLogger.Tracef("Using existing cache entry for Authorization Server: %v", actual.url)
 	}
 	return
 }
 
 // Store sets the value for a key.
-func (asl *AuthorizationServerList) Store(key string, value AuthorizationServer) {
+func (asl *AuthorizationServerList) Store(requestLogger *logrus.Entry, key string, value AuthorizationServer) {
 	asl.rwMutex.Lock()
 	defer asl.rwMutex.Unlock()
 	asl.authServers[key] = value
-	logrus.Infof("Authorization Server stored in the cache: %v", value.url)
+	requestLogger.Infof("Authorization Server stored in the cache: %v", value.url)
 }
 
 //------------------------------------------------------------------------------

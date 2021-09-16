@@ -18,7 +18,9 @@ func main() {
 	router := mux.NewRouter()
 
 	// Register middlewares
-	router.Use(handler.RequestLogger)
+	// COMMENTED OUT, since the usual Request Logger is less useful in this case
+	// because the 'target' URL is passed in the http headers
+	// router.Use(handler.RequestLogger)
 
 	// Register request handler for status
 	handler.NewStatusRouter(router.PathPrefix("/status").Subrouter())
