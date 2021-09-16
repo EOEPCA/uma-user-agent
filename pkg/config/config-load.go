@@ -91,11 +91,21 @@ func configInitFromFile(v *viper.Viper, configName string, configDir string, con
 	// Watch
 	if err == nil {
 		v.OnConfigChange(func(in fsnotify.Event) {
-			go func() {
-				logrus.Warn("Config has changed")
-				logrus.SetLevel(GetLogLevel())
-			}()
+			// Need this throttling trick to avoid double load events
+			timeDelay := 100 * time.Millisecond
+			if changeThrottleTimer == nil {
+				changeThrottleTimer = time.AfterFunc(timeDelay, configChangeHandler)
+			} else {
+				changeThrottleTimer.Reset(timeDelay)
+			}
 		})
 		v.WatchConfig()
 	}
+}
+
+var changeThrottleTimer *time.Timer
+
+func configChangeHandler() {
+	logrus.Warn("Config has changed")
+	logrus.SetLevel(GetLogLevel())
 }
