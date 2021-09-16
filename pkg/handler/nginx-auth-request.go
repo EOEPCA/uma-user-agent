@@ -137,6 +137,11 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (reqUpdated *
 	// Get the request logger
 	requestLogger := GetRequestLogger(reqUpdated.Context())
 
+	// Some verbose logging
+	requestLogger.Tracef("X-Original-Method: %s", details.OrigMethod)
+	requestLogger.Tracef("X-Original-Uri: %s", details.OrigUri)
+	requestLogger.Tracef("X-User-Id: %s", details.UserIdToken)
+
 	// Check details are complete
 	if len(details.OrigUri) == 0 || len(details.OrigMethod) == 0 || len(details.UserIdToken) == 0 {
 		err = fmt.Errorf("mandatory header values missing")
@@ -249,6 +254,7 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 		fmt.Fprint(w, msg)
 		return
 	}
+	requestLogger.Tracef("Obtained RPT: %s", clientRequestDetails.Rpt)
 
 	// Call the PEP with the RPT
 	requestLogger.Debug("Calling PEP `auth_request` with RPT")
