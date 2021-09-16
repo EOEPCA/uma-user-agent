@@ -60,6 +60,7 @@ func NginxAuthRequestHandler(rw http.ResponseWriter, r *http.Request) {
 	requestLogger.Debug("START handling new request")
 
 	// Naive call to the PEP
+	requestLogger.Debug("Calling PEP `auth_request` initial (naive) attempt")
 	pepResponse, err := pepAuthRequest(clientRequestDetails)
 	if err != nil {
 		msg := "ERROR making naive call to the pep auth_request endpoint"
@@ -240,6 +241,7 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 	}
 
 	// Call the PEP with the RPT
+	requestLogger.Debug("Calling PEP `auth_request` with RPT")
 	pepResponse, err := pepAuthRequest(clientRequestDetails)
 	if err != nil {
 		msg := "ERROR making call (with RPT) to the pep auth_request endpoint"
