@@ -87,11 +87,12 @@ func handlePepResponse(clientRequestDetails ClientRequestDetails, pepResponse *h
 		fmt.Fprint(w, msg)
 	case code == 401:
 		// UNAUTHORIZED
+		msg := "PEP responded UNAUTHORIZED"
+		requestLogger.Debug(msg)
 		if unauthResponseHandler != nil {
 			unauthResponseHandler(clientRequestDetails, pepResponse, w, r)
 		} else {
-			msg := "PEP responded UNAUTHORIZED"
-			requestLogger.Debug(msg)
+			requestLogger.Debugf("RPT was not accepted: %s", clientRequestDetails.Rpt)
 			WriteHeaderUnauthorized(w)
 			fmt.Fprint(w, msg)
 		}
@@ -236,6 +237,15 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 			requestLogger.Error(fmt.Errorf("%s: %w", msg, err))
 			WriteHeaderUnauthorized(w)
 		}
+		fmt.Fprint(w, msg)
+		return
+	}
+
+	// Check the RPT looks OK
+	if len(clientRequestDetails.Rpt) == 0 {
+		msg := "the RPT obtained is blank"
+		requestLogger.Error(msg)
+		WriteHeaderUnauthorized(w)
 		fmt.Fprint(w, msg)
 		return
 	}
