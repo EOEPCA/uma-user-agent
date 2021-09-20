@@ -62,3 +62,7 @@ func GetUserIdCookieName() string {
 func GetUnauthorizedResponse() string {
 	return appConfig.GetString(keyUnauthorizedResponse.key)
 }
+
+func IsOpenAccess() bool {
+	return appConfig.GetBool(keyOpenAccess.key)
+}

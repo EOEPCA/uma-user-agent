@@ -49,6 +49,11 @@ type pepResponseHandlerFunc func(ClientRequestDetails, *http.Response, http.Resp
 func NginxAuthRequestHandler(rw http.ResponseWriter, r *http.Request) {
 	w := &wrappedResponseWriter{rw, http.StatusOK}
 
+	// If we are in 'OPEN' mode then the request is simply allowed
+	if nginxAuthRequestHandlerOpen(w, r) {
+		return
+	}
+
 	// Gather expected info from headers/cookies
 	r, clientRequestDetails, err := processRequestHeaders(w, r)
 	requestLogger := GetRequestLogger(r.Context())
@@ -72,6 +77,26 @@ func NginxAuthRequestHandler(rw http.ResponseWriter, r *http.Request) {
 
 	// Handle the response
 	handlePepResponse(clientRequestDetails, pepResponse, handlePepNaiveUnauthorized, w, r)
+}
+
+// nginxAuthRequestHandlerOpen provides an nginx `auth_request` handler for OPEN access
+func nginxAuthRequestHandlerOpen(w http.ResponseWriter, r *http.Request) (requestHandled bool) {
+	requestHandled = config.IsOpenAccess()
+	if requestHandled {
+		// Pass on the User ID Token if provided in the request
+		userIdToken := r.Header.Get(headerNameXUserId)
+		// If no user ID token in header, then fall back to cookie
+		if len(userIdToken) == 0 {
+			c, err := r.Cookie(config.GetUserIdCookieName())
+			if err == nil {
+				userIdToken = c.Value
+			}
+		}
+		w.Header().Set(headerNameXUserId, userIdToken)
+
+		fmt.Fprintln(w, "Allowing OPEN access")
+	}
+	return
 }
 
 // handlePepResponse is a helper function to handle the response from the PEP's `auth_request` endpoint
