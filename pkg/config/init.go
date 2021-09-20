@@ -1,6 +1,8 @@
 package config
 
-import "github.com/sirupsen/logrus"
+import (
+	"github.com/sirupsen/logrus"
+)
 
 func init() {
 	// Logger
@@ -9,8 +11,8 @@ func init() {
 	// Load config from files
 	configInit()
 
-	// log level - from config-specified value
-	logrus.SetLevel(GetLogLevel())
+	// Trigger config change handlers
+	go TriggerConfigChangeHandlers()
 }
 
 func initLogger() {
@@ -19,4 +21,10 @@ func initLogger() {
 	logFormatter.TimestampFormat = "2006-01-02 15:04:05.000"
 	logrus.SetFormatter(logFormatter)
 	logFormatter.FullTimestamp = true
+	// config change handler
+	AddConfigChangeHandler(updateLoggerConfig)
+}
+
+func updateLoggerConfig() {
+	logrus.SetLevel(GetLogLevel())
 }

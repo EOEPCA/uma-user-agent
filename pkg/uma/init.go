@@ -1,9 +1,9 @@
 package uma
 
 import (
-	"github.com/sirupsen/logrus"
+	"github.com/EOEPCA/uma-user-agent/pkg/config"
 )
 
 func init() {
-	logrus.Info("Initialising Http Client with timeout: ", HttpClient.Timeout)
+	config.AddConfigChangeHandler(configChangeHandler)
 }

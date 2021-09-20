@@ -94,7 +94,7 @@ func configInitFromFile(v *viper.Viper, configName string, configDir string, con
 			// Need this throttling trick to avoid double load events
 			timeDelay := 100 * time.Millisecond
 			if changeThrottleTimer == nil {
-				changeThrottleTimer = time.AfterFunc(timeDelay, configChangeHandler)
+				changeThrottleTimer = time.AfterFunc(timeDelay, handleConfigChange)
 			} else {
 				changeThrottleTimer.Reset(timeDelay)
 			}
@@ -104,8 +104,3 @@ func configInitFromFile(v *viper.Viper, configName string, configDir string, con
 }
 
 var changeThrottleTimer *time.Timer
-
-func configChangeHandler() {
-	logrus.Warn("Config has changed")
-	logrus.SetLevel(GetLogLevel())
-}
