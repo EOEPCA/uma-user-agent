@@ -51,6 +51,10 @@ func NginxAuthRequestHandler(rw http.ResponseWriter, r *http.Request) {
 
 	// If we are in 'OPEN' mode then the request is simply allowed
 	if nginxAuthRequestHandlerOpen(w, r) {
+		w.LogRequestCompletion(logrus.StandardLogger().WithFields(logrus.Fields{
+			"origUri":    r.Header.Get(headerNameXOriginalUri),
+			"origMethod": r.Header.Get(headerNameXOriginalMethod),
+		}))
 		return
 	}
 
