@@ -13,6 +13,7 @@ import (
 const headerNameXOriginalUri = "X-Original-Uri"
 const headerNameXOriginalMethod = "X-Original-Method"
 const headerNameXUserId = "X-User-Id"
+const headerNameXAuthRpt = "X-Auth-Rpt"
 
 // ClientRequestDetails represents the details of the 'incoming' request made by the client
 type ClientRequestDetails struct {
@@ -112,6 +113,7 @@ func handlePepResponse(clientRequestDetails ClientRequestDetails, pepResponse *h
 		msg := fmt.Sprintf("PEP authorized the request with code: %v", code)
 		requestLogger.Debug(msg)
 		w.Header().Set(headerNameXUserId, clientRequestDetails.UserIdToken)
+		w.Header().Set(headerNameXAuthRpt, clientRequestDetails.Rpt)
 		w.WriteHeader(code)
 		fmt.Fprint(w, msg)
 	case code == 401:
@@ -158,6 +160,13 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (reqUpdated *
 			details.UserIdToken = c.Value
 		}
 	}
+	// RPT
+	{
+		c, err := r.Cookie(config.GetAuthRptCookieName())
+		if err == nil {
+			details.Rpt = c.Value
+		}
+	}
 
 	// Update the request context with the supplied headers
 	r = UpdateRequestWithDetails(r, details)
@@ -167,21 +176,20 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (reqUpdated *
 	requestLogger := GetRequestLogger(reqUpdated.Context())
 
 	// Some verbose logging
-	requestLogger.Tracef("X-Original-Method: %s", details.OrigMethod)
-	requestLogger.Tracef("X-Original-Uri: %s", details.OrigUri)
-	requestLogger.Tracef("X-User-Id: %s", details.UserIdToken)
+	requestLogger.Tracef("%s: %s", headerNameXOriginalMethod, details.OrigMethod)
+	requestLogger.Tracef("%s: %s", headerNameXOriginalUri, details.OrigUri)
+	requestLogger.Tracef("%s: %s", headerNameXUserId, details.UserIdToken)
+	requestLogger.Tracef("%s: %s", headerNameXAuthRpt, details.Rpt)
 
 	// Check details are complete
-	if len(details.OrigUri) == 0 || len(details.OrigMethod) == 0 || len(details.UserIdToken) == 0 {
+	if len(details.OrigUri) == 0 || len(details.OrigMethod) == 0 {
 		err = fmt.Errorf("mandatory header values missing")
 		WriteHeaderUnauthorized(w)
 		fmt.Fprintln(w, "ERROR: Expecting non-zero values for the following data...")
 		fmt.Fprintf(w, "  Original URI:    %v\n    [header %v]\n", details.OrigUri, headerNameXOriginalUri)
 		fmt.Fprintf(w, "  Original Method: %v\n    [header %v]\n", details.OrigMethod, headerNameXOriginalMethod)
-		fmt.Fprintf(w, "  User ID Token:   %v\n    [header %v or cookie '%v']\n", details.UserIdToken, headerNameXUserId, config.GetUserIdCookieName())
 		return
 	}
-	requestLogger.Trace(fmt.Sprintf("Handling request: origUri: %v, origMethod: %v, userIdToken: %v", details.OrigUri, details.OrigMethod, details.UserIdToken))
 
 	return
 }
@@ -199,7 +207,9 @@ func pepAuthRequest(details ClientRequestDetails) (response *http.Response, err 
 	}
 	pepReq.Header.Set(headerNameXOriginalUri, details.OrigUri)
 	pepReq.Header.Set(headerNameXOriginalMethod, details.OrigMethod)
-	pepReq.Header.Set(headerNameXUserId, details.UserIdToken)
+	if len(details.UserIdToken) > 0 {
+		pepReq.Header.Set(headerNameXUserId, details.UserIdToken)
+	}
 	if len(details.Rpt) > 0 {
 		pepReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", details.Rpt))
 	}

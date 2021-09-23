@@ -9,24 +9,26 @@ import (
 
 type requestContextKey string
 
-var keyOrigUri = requestContextKey("ORIG_URI")
-var keyOrigMethod = requestContextKey("ORIG_METHOD")
-var keyUserIdToken = requestContextKey("USER_ID_TOKEN")
+var contextKeyOrigUri = requestContextKey("ORIG_URI")
+var contextKeyOrigMethod = requestContextKey("ORIG_METHOD")
+var contextKeyUserIdToken = requestContextKey("USER_ID_TOKEN")
+var contextKeyRpt = requestContextKey("RPT")
 
 // UpdateRequestWithDetails puts the supplied request details into the request context,
 // and returns a new Request object with the updated context
 func UpdateRequestWithDetails(r *http.Request, requestDetails ClientRequestDetails) *http.Request {
 	c := r.Context()
-	c = context.WithValue(c, keyOrigUri, requestDetails.OrigUri)
-	c = context.WithValue(c, keyOrigMethod, requestDetails.OrigMethod)
-	c = context.WithValue(c, keyUserIdToken, requestDetails.UserIdToken)
+	c = context.WithValue(c, contextKeyOrigUri, requestDetails.OrigUri)
+	c = context.WithValue(c, contextKeyOrigMethod, requestDetails.OrigMethod)
+	c = context.WithValue(c, contextKeyUserIdToken, requestDetails.UserIdToken)
+	c = context.WithValue(c, contextKeyRpt, requestDetails.Rpt)
 	return r.WithContext(c)
 }
 
 // GetRequestLogger returns a logger with fields set from the supplied request context
 func GetRequestLogger(c context.Context) *logrus.Entry {
 	return logrus.StandardLogger().WithFields(logrus.Fields{
-		"origUri":    c.Value(keyOrigUri),
-		"origMethod": c.Value(keyOrigMethod),
+		"origUri":    c.Value(contextKeyOrigUri),
+		"origMethod": c.Value(contextKeyOrigMethod),
 	})
 }

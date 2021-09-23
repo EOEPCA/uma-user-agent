@@ -1,0 +1,10 @@
+
+###
+GET / HTTP/1.1
+Host: localhost:8080
+X-Original-Method: GET 
+X-Original-Uri: /ades
+X-User-Id: my-token
+Cookie: auth_rpt=0123456789ABCDEF
+
+###

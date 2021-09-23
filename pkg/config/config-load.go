@@ -27,6 +27,7 @@ var keyHttpTimeout = configKey{"network.httpTimeout", 10}
 var keyListenPort = configKey{"network.listenPort", 80}
 var keyPepUrl = configKey{"pep.url", "http://pep"}
 var keyUserIdCookieName = configKey{"userIdCookieName", "auth_user_id"}
+var keyAuthRptCookieName = configKey{"authRptCookieName", "auth_rpt"}
 var keyUnauthorizedResponse = configKey{"unauthorizedResponse", "Please login to access the resource"}
 var keyOpenAccess = configKey{"openAccess", false}
 
