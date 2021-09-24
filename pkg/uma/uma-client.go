@@ -60,7 +60,7 @@ func (umaClient *UmaClient) ExchangeTicketForRpt(requestLogger *logrus.Entry, au
 	err = nil
 
 	// Check we have a User ID Token
-	if len(userIdToken) > 0 {
+	if len(userIdToken) == 0 {
 		err = fmt.Errorf("missing User ID Token to exchange ticket for RPT")
 		requestLogger.Error(err)
 		return
