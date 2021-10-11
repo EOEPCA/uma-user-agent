@@ -113,7 +113,7 @@ func handlePepResponse(clientRequestDetails ClientRequestDetails, pepResponse *h
 		msg := fmt.Sprintf("PEP authorized the request with code: %v", code)
 		requestLogger.Debug(msg)
 		w.Header().Set(headerNameXUserId, clientRequestDetails.UserIdToken)
-		w.Header().Set(headerNameXAuthRpt, clientRequestDetails.Rpt)
+		setRptCookieInResponse(clientRequestDetails.Rpt, w)
 		w.WriteHeader(code)
 		fmt.Fprint(w, msg)
 	case code == 401:
@@ -314,4 +314,12 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 func WriteHeaderUnauthorized(w http.ResponseWriter) {
 	w.Header().Set("Www-Authenticate", config.GetUnauthorizedResponse())
 	w.WriteHeader(http.StatusUnauthorized)
+}
+
+// setRptCookieInResponse uses an http header to provide the `Set-Cookie` string.
+func setRptCookieInResponse(rpt string, w http.ResponseWriter) {
+	w.Header().Set(headerNameXAuthRpt,
+		fmt.Sprintf("%s=%s; Secure; HttpOnly; Max-Age=%d",
+			config.GetAuthRptCookieName(),
+			rpt, config.GetAuthRptCookieMaxAge()))
 }

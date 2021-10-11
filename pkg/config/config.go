@@ -63,6 +63,10 @@ func GetAuthRptCookieName() string {
 	return appConfig.GetString(keyAuthRptCookieName.key)
 }
 
+func GetAuthRptCookieMaxAge() int {
+	return appConfig.GetInt(keyAuthRptCookieMaxAge.key)
+}
+
 func GetUnauthorizedResponse() string {
 	return appConfig.GetString(keyUnauthorizedResponse.key)
 }

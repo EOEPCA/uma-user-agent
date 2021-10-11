@@ -28,6 +28,7 @@ var keyListenPort = configKey{"network.listenPort", 80}
 var keyPepUrl = configKey{"pep.url", "http://pep"}
 var keyUserIdCookieName = configKey{"userIdCookieName", "auth_user_id"}
 var keyAuthRptCookieName = configKey{"authRptCookieName", "auth_rpt"}
+var keyAuthRptCookieMaxAge = configKey{"authRptCookieMaxAge", 300}
 var keyUnauthorizedResponse = configKey{"unauthorizedResponse", "Please login to access the resource"}
 var keyOpenAccess = configKey{"openAccess", false}
 
@@ -35,7 +36,17 @@ var keyOpenAccess = configKey{"openAccess", false}
 var clientConfigKeys = []configKey{keyClientId, keyClientSecret}
 
 // App config
-var appConfigKeys = []configKey{}
+var appConfigKeys = []configKey{
+	keyLoggingLevel,
+	keyHttpTimeout,
+	keyListenPort,
+	keyPepUrl,
+	keyUserIdCookieName,
+	keyAuthRptCookieName,
+	keyAuthRptCookieMaxAge,
+	keyUnauthorizedResponse,
+	keyOpenAccess,
+}
 
 // Init
 func configInit() {
