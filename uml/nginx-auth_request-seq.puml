@@ -1,0 +1,97 @@
+@startuml
+title Nginx auth_request
+
+hide stereotype
+
+skinparam participant<<client>> {
+  BackgroundColor LightGreen
+  BorderColor Green
+}
+skinparam participant<<nginx>> {
+  BackgroundColor Yellow
+  BorderColor GoldenRod
+}
+skinparam participant<<agent>> {
+  BackgroundColor BurlyWood
+  BorderColor DarkOrange
+}
+skinparam participant<<pep>> {
+  BackgroundColor Pink
+  BorderColor Red
+}
+skinparam participant<<ades>> {
+  BackgroundColor Cyan
+  BorderColor Blue
+}
+
+participant "Client" as client<<client>> order 10
+participant "Nginx" as nginx<<nginx>> order 20
+participant "UMA\nUser Agent" as agent<<agent>> order 30
+participant "PEP" as pep<<pep>> order 40
+participant "Resource Server\ne.g. ADES" as ades<<ades>> order 50
+
+autonumber
+client -> client : authenticate user : User-Id-Token
+client -> nginx : request resource\n(RPT | User-ID-Token)
+note right
+Client provides, in order of precedence:
+* Relying Party Token (RPT) in cookie `auth_rpt`
+* User ID Token in header `X-User-Id`
+* User ID Token in cookie `auth_user_id`
+end note
+nginx -> agent : auth_request\n(RPT|User-ID-Token, X-Original-Uri, X-Original-Method)
+agent -> pep : auth_request\n(RPT, X-Original-Uri, X-Original-Method)
+pep -> pep : makes checks
+note left
+The PEP implements the Nginx `auth_request` interface. Via this interface, the `uma-user-agent`
+defers to the PEP fot the authorization decision.
+The PEP uses the X-Original-Uri & X-Original-Method headers, plus the optionally supplied RPT,
+to make the enforcement decision regarding the access authorization.
+end note
+
+alt AUTHORIZED
+  alt UMA FLOW
+    agent <-- pep : decision : 401 (Www-Authenticate:ticket)
+    agent -> agent : UMA Flow with Authorization Server
+    note left
+    The UMA User Agent obtains the ticket from the Www-Authenticate header returned
+    by the PEP. The ticket + User-Id-Token are submitted to the token endpoint to
+    exchange for an RPT, that can be represented to the PEP.
+    end note
+    agent -> pep : auth_request\n(RPT, X-Original-Uri, X-Original-Method)
+    pep -> pep : makes checks
+  end
+  agent <-- pep : decision : 200
+  nginx <-- agent : decision : 200 (X-Auth-Rpt)
+  note left
+  The `uma-user-agent` set the header `X-Auth-Rpt`
+  to pass the RPT to Nginx, for setting the `auth_rpt`
+  return cookie
+  end note
+  nginx -> ades : request resource (X-User-Id)
+  note left
+  Nginx proxies the request, including the client-provided
+  headers.
+  The **X-User-Id** header is used by the Resource Server
+  for any calls it makes to other protected components
+  using the UMA flow
+  end note
+  client <-- ades : requested resource (auth_rpt cookie)
+end
+
+alt UNAUTHORIZED
+  nginx <-- pep : decision : 401, Www-Authenticate=ticket
+  client <-- nginx : unauthorized : 401, Www-Authenticate=ticket
+end
+
+alt FORBIDDEN
+  nginx <-- pep : decision : 403
+  client <-- nginx : forbidden : 403
+end
+
+alt BAD RESPONSE
+  nginx <-- pep : decision : not 200-299/401/403
+  client <-- nginx : internal server error : 500
+end
+
+@enduml
