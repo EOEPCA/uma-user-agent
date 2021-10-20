@@ -21,6 +21,7 @@ type ClientRequestDetails struct {
 	OrigMethod  string
 	UserIdToken string
 	Rpt         string
+	Tries       int
 }
 
 // wrappedResponseWriter provides access to the StatusCode that is written to the http header,
@@ -44,30 +45,46 @@ func (rl *wrappedResponseWriter) LogRequestCompletion(requestLogger *logrus.Entr
 
 // pepResponseHandlerFunc defines the function prototype for functions able to
 // handle the response to an `auth_request` made to the PEP
-type pepResponseHandlerFunc func(ClientRequestDetails, *http.Response, http.ResponseWriter, *http.Request)
+type pepResponseHandlerFunc func(*ClientRequestDetails, *http.Response, http.ResponseWriter, *http.Request)
 
 // NginxAuthRequestHandler is the entrypoint handler for the nginx `auth_request` implementation
 func NginxAuthRequestHandler(rw http.ResponseWriter, r *http.Request) {
+	var clientRequestDetails *ClientRequestDetails
+	// Ensure that request status is logged at completion
 	w := &wrappedResponseWriter{rw, http.StatusOK}
-
-	// If we are in 'OPEN' mode then the request is simply allowed
-	if nginxAuthRequestHandlerOpen(w, r) {
-		w.LogRequestCompletion(logrus.StandardLogger().WithFields(logrus.Fields{
-			"origUri":    r.Header.Get(headerNameXOriginalUri),
-			"origMethod": r.Header.Get(headerNameXOriginalMethod),
-		}))
-		return
-	}
+	defer func() {
+		r = UpdateRequestWithDetails(r, clientRequestDetails)
+		w.LogRequestCompletion(GetRequestLogger(r.Context()))
+	}()
 
 	// Gather expected info from headers/cookies
 	r, clientRequestDetails, err := processRequestHeaders(w, r)
 	requestLogger := GetRequestLogger(r.Context())
-	defer w.LogRequestCompletion(requestLogger)
 	if err != nil {
 		requestLogger.Error("ERROR processing request headers: ", err)
 		return
 	}
+
+	// If we are in 'OPEN' mode then the request is simply allowed
+	if nginxAuthRequestHandlerOpen(w, r) {
+		return
+	}
+
+	// Defer the Authorization decision to the PEP
 	requestLogger.Debug("START handling new request")
+	deferAuthorizationToPep(clientRequestDetails, w, r)
+}
+
+func deferAuthorizationToPep(clientRequestDetails *ClientRequestDetails, w http.ResponseWriter, r *http.Request) {
+	// Increment the 'try' counter
+	clientRequestDetails.Tries += 1
+	r = UpdateRequestWithDetails(r, clientRequestDetails)
+	requestLogger := GetRequestLogger(r.Context())
+	if clientRequestDetails.Tries > 1 {
+		requestLogger.Warningf("Authorization retry attempt #%d", clientRequestDetails.Tries-1)
+	} else {
+		requestLogger.Debug("First Authorization attempt")
+	}
 
 	// Naive call to the PEP
 	requestLogger.Debug("Calling PEP `auth_request` initial (naive) attempt")
@@ -105,7 +122,7 @@ func nginxAuthRequestHandlerOpen(w http.ResponseWriter, r *http.Request) (reques
 }
 
 // handlePepResponse is a helper function to handle the response from the PEP's `auth_request` endpoint
-func handlePepResponse(clientRequestDetails ClientRequestDetails, pepResponse *http.Response, unauthResponseHandler pepResponseHandlerFunc, w http.ResponseWriter, r *http.Request) {
+func handlePepResponse(clientRequestDetails *ClientRequestDetails, pepResponse *http.Response, unauthResponseHandler pepResponseHandlerFunc, w http.ResponseWriter, r *http.Request) {
 	requestLogger := GetRequestLogger(r.Context())
 	switch code := pepResponse.StatusCode; {
 	case code >= 200 && code <= 299:
@@ -120,12 +137,19 @@ func handlePepResponse(clientRequestDetails ClientRequestDetails, pepResponse *h
 		// UNAUTHORIZED
 		msg := "PEP responded UNAUTHORIZED"
 		requestLogger.Debug(msg)
+		// Use specific handler if it's been provided
 		if unauthResponseHandler != nil {
 			unauthResponseHandler(clientRequestDetails, pepResponse, w, r)
 		} else {
-			requestLogger.Debugf("RPT was not accepted: %s", clientRequestDetails.Rpt)
-			WriteHeaderUnauthorized(w)
-			fmt.Fprint(w, msg)
+			// If) we have remaining retry attempts, then go back around the loop
+			// Else) retries are exhausted, so return unauthorized
+			if (clientRequestDetails.Tries - 1) < config.GetRetries() {
+				deferAuthorizationToPep(clientRequestDetails, w, r)
+			} else {
+				requestLogger.Debugf("RPT was not accepted: %s", clientRequestDetails.Rpt)
+				WriteHeaderUnauthorized(w)
+				fmt.Fprint(w, msg)
+			}
 		}
 	case code == 403:
 		// FORBIDDEN
@@ -144,9 +168,9 @@ func handlePepResponse(clientRequestDetails ClientRequestDetails, pepResponse *h
 
 // processRequestHeaders is a helper function to extract the expected information from the
 // http headers of the received `auth_request`
-func processRequestHeaders(w http.ResponseWriter, r *http.Request) (reqUpdated *http.Request, details ClientRequestDetails, err error) {
+func processRequestHeaders(w http.ResponseWriter, r *http.Request) (reqUpdated *http.Request, details *ClientRequestDetails, err error) {
 	reqUpdated = r
-	details = ClientRequestDetails{}
+	details = &ClientRequestDetails{}
 	err = nil
 
 	// Gather expected info from headers/cookies
@@ -195,7 +219,7 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (reqUpdated *
 }
 
 // pepAuthRequest calls the PEP `auth_request` endpoint
-func pepAuthRequest(details ClientRequestDetails) (response *http.Response, err error) {
+func pepAuthRequest(details *ClientRequestDetails) (response *http.Response, err error) {
 	response = nil
 	err = nil
 
@@ -226,7 +250,7 @@ func pepAuthRequest(details ClientRequestDetails) (response *http.Response, err 
 
 // handlePepNaiveUnauthorized provides the behaviour that is triggered by a 401 (Unauthorized)
 // response to a naive (no RPT) request to the PEP `auth_request` endpoint
-func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUnauthResponse *http.Response, w http.ResponseWriter, r *http.Request) {
+func handlePepNaiveUnauthorized(clientRequestDetails *ClientRequestDetails, pepUnauthResponse *http.Response, w http.ResponseWriter, r *http.Request) {
 	requestLogger := GetRequestLogger(r.Context())
 	// Check that this is a 401 response
 	if pepUnauthResponse.StatusCode != http.StatusUnauthorized {
@@ -294,6 +318,10 @@ func handlePepNaiveUnauthorized(clientRequestDetails ClientRequestDetails, pepUn
 		return
 	}
 	requestLogger.Tracef("Obtained RPT: %s", clientRequestDetails.Rpt)
+
+	// Update the request context with the RPT
+	r = UpdateRequestWithDetails(r, clientRequestDetails)
+	requestLogger = GetRequestLogger(r.Context())
 
 	// Call the PEP with the RPT
 	requestLogger.Debug("Calling PEP `auth_request` with RPT")

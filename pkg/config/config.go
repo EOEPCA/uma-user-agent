@@ -71,6 +71,10 @@ func GetUnauthorizedResponse() string {
 	return appConfig.GetString(keyUnauthorizedResponse.key)
 }
 
+func GetRetries() int {
+	return appConfig.GetInt(keyRetries.key)
+}
+
 func IsOpenAccess() bool {
 	return appConfig.GetBool(keyOpenAccess.key)
 }
