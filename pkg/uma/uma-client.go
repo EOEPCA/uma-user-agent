@@ -97,7 +97,7 @@ func (umaClient *UmaClient) ExchangeTicketForRpt(requestLogger *logrus.Entry, au
 
 	// Make the request
 	requestLogger.Debug("Requesting RPT from token endpoint: ", tokenEndpoint)
-	response, err := HttpClient.Do(request)
+	response, err := MakeResilentRequest(request, requestLogger, "ExchangeTicketForRpt")
 	if err != nil {
 		msg := "error making request to Token Endpoint: " + tokenEndpoint
 		err = fmt.Errorf("%s: %w", msg, err)

@@ -88,7 +88,7 @@ func deferAuthorizationToPep(clientRequestDetails *ClientRequestDetails, w http.
 
 	// Naive call to the PEP
 	requestLogger.Debug("Calling PEP `auth_request` initial (naive) attempt")
-	pepResponse, err := pepAuthRequest(clientRequestDetails)
+	pepResponse, err := pepAuthRequest(clientRequestDetails, requestLogger)
 	if err != nil {
 		msg := "ERROR making naive call to the pep auth_request endpoint"
 		requestLogger.Error(fmt.Errorf("%s: %w", msg, err))
@@ -219,7 +219,7 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (reqUpdated *
 }
 
 // pepAuthRequest calls the PEP `auth_request` endpoint
-func pepAuthRequest(details *ClientRequestDetails) (response *http.Response, err error) {
+func pepAuthRequest(details *ClientRequestDetails, requestLogger *logrus.Entry) (response *http.Response, err error) {
 	response = nil
 	err = nil
 
@@ -239,7 +239,7 @@ func pepAuthRequest(details *ClientRequestDetails) (response *http.Response, err
 	}
 
 	// Send the request
-	response, err = uma.HttpClient.Do(pepReq)
+	response, err = uma.MakeResilentRequest(pepReq, requestLogger, "pepAuthRequest")
 	if err != nil {
 		response = nil
 		err = fmt.Errorf("error requesting auth from PEP: %w", err)
@@ -325,7 +325,7 @@ func handlePepNaiveUnauthorized(clientRequestDetails *ClientRequestDetails, pepU
 
 	// Call the PEP with the RPT
 	requestLogger.Debug("Calling PEP `auth_request` with RPT")
-	pepResponse, err := pepAuthRequest(clientRequestDetails)
+	pepResponse, err := pepAuthRequest(clientRequestDetails, requestLogger)
 	if err != nil {
 		msg := "ERROR making call (with RPT) to the pep auth_request endpoint"
 		requestLogger.Error(fmt.Errorf("%s: %w", msg, err))
@@ -347,7 +347,7 @@ func WriteHeaderUnauthorized(w http.ResponseWriter) {
 // setRptCookieInResponse uses an http header to provide the `Set-Cookie` string.
 func setRptCookieInResponse(rpt string, w http.ResponseWriter) {
 	w.Header().Set(headerNameXAuthRpt,
-		fmt.Sprintf("%s=%s; Secure; HttpOnly; Max-Age=%d",
+		fmt.Sprintf("%s=%s; Path=/; Secure; HttpOnly; Max-Age=%d",
 			config.GetAuthRptCookieName(),
 			rpt, config.GetAuthRptCookieMaxAge()))
 }
