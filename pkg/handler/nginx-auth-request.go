@@ -191,8 +191,8 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (reqUpdated *
 			details.UserIdToken = c.Value
 		}
 	}
-	// RPT
-	{
+	// RPT - only if we have an ID token
+	if len(details.UserIdToken) > 0 {
 		c, err := r.Cookie(config.GetAuthRptCookieName())
 		if err == nil {
 			details.Rpt = c.Value
