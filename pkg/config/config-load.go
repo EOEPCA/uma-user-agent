@@ -30,7 +30,8 @@ var keyUserIdCookieName = configKey{"userIdCookieName", "auth_user_id"}
 var keyAuthRptCookieName = configKey{"authRptCookieName", "auth_rpt"}
 var keyAuthRptCookieMaxAge = configKey{"authRptCookieMaxAge", 300}
 var keyUnauthorizedResponse = configKey{"unauthorizedResponse", "Please login to access the resource"}
-var keyRetries = configKey{"retries", 1}
+var keyRetriesAuthorizationAttempt = configKey{"retries.authorizationAttempt", 1}
+var keyRetriesHttpRequest = configKey{"retries.httpRequest", 1}
 var keyOpenAccess = configKey{"openAccess", false}
 
 // Client config
@@ -46,7 +47,8 @@ var appConfigKeys = []configKey{
 	keyAuthRptCookieName,
 	keyAuthRptCookieMaxAge,
 	keyUnauthorizedResponse,
-	keyRetries,
+	keyRetriesAuthorizationAttempt,
+	keyRetriesHttpRequest,
 	keyOpenAccess,
 }
 

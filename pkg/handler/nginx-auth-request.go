@@ -143,7 +143,7 @@ func handlePepResponse(clientRequestDetails *ClientRequestDetails, pepResponse *
 		} else {
 			// If) we have remaining retry attempts, then go back around the loop
 			// Else) retries are exhausted, so return unauthorized
-			if (clientRequestDetails.Tries - 1) < config.GetRetries() {
+			if (clientRequestDetails.Tries - 1) < config.GetRetriesAuthorizationAttempt() {
 				deferAuthorizationToPep(clientRequestDetails, w, r)
 			} else {
 				requestLogger.Debugf("RPT was not accepted: %s", clientRequestDetails.Rpt)
