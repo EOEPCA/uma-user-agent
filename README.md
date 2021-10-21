@@ -201,6 +201,8 @@ The `config.yaml` file supports the following values:
 | authRptCookieName | Name of the cookie that carries the RPT of the last successful request<br>Note that this is a prefix for the name that is appended with `-<endpoint-name>` | `auth_rpt` |
 | authRptCookieMaxAge | Maximum age of the RPT cookie, to set the expiry (secs) | `300` |
 | unauthorizedResponse | Text that should form the value for the `Www-Authenticate` header in the `401` response | n/a |
+| retries.authorizationAttempt | Number of retry attempts in the case of an unexpected unauthorized response - i.e. the UMA flow has been successfully followed to obtain a fresh RPT, but it is still rejected<br>A zero `0` value means no retries. | `1` |
+| retries.httpRequest | Number of retry attempts in the case of an http request that fails due to specific conditions:<br>* 5xx status code (i.e. server-side error)<br>* Request timeout (i.e. unresponsive server)<br>A zero `0` value means no retries. | `1` |
 | openAccess | Boolean to set 'open' access to the resource server.<br>A value of `true` bypasses protections | `false` |
 
 <p align="right">(<a href="#top">back to top</a>)</p>
