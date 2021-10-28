@@ -136,6 +136,7 @@ The uma-user-agent sets the following headers in the http response:
 * `2xx (OK)`
   * `X-User-Id`: user ID token, to be passed-on to the target _Resource Server_
   * `X-Auth-Rpt`: RPT from successful authorization
+  * `X-Auth-Rpt-Options`: cookie options for RPT
 * `401 (Unauthorized)`
   * Www-Authenticate: defines http authorization methods
 * `403 (Forbidden)`<br>

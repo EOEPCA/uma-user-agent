@@ -14,6 +14,7 @@ const headerNameXOriginalUri = "X-Original-Uri"
 const headerNameXOriginalMethod = "X-Original-Method"
 const headerNameXUserId = "X-User-Id"
 const headerNameXAuthRpt = "X-Auth-Rpt"
+const headerNameXAuthRptOptions = "X-Auth-Rpt-Options"
 
 // ClientRequestDetails represents the details of the 'incoming' request made by the client
 type ClientRequestDetails struct {
@@ -346,10 +347,12 @@ func WriteHeaderUnauthorized(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusUnauthorized)
 }
 
-// setRptCookieInResponse uses an http header to provide the `Set-Cookie` string.
+// setRptCookieInResponse uses http headers to provide the `Set-Cookie` string.
+// Two headers are used:
+// * one for the RPT
+// * one for the additional cookie options
 func setRptCookieInResponse(rpt string, w http.ResponseWriter) {
-	w.Header().Set(headerNameXAuthRpt,
-		fmt.Sprintf("%s=%s; Path=/; Secure; HttpOnly; Max-Age=%d",
-			config.GetAuthRptCookieName(),
-			rpt, config.GetAuthRptCookieMaxAge()))
+	w.Header().Set(headerNameXAuthRpt, rpt)
+	w.Header().Set(headerNameXAuthRptOptions,
+		fmt.Sprintf("Path=/; Secure; HttpOnly; Max-Age=%d", config.GetAuthRptCookieMaxAge()))
 }
