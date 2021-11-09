@@ -5,5 +5,6 @@ import (
 )
 
 func init() {
+	initHttpClient()
 	config.AddConfigChangeHandler(configChangeHandler)
 }

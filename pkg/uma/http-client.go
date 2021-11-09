@@ -1,6 +1,7 @@
 package uma
 
 import (
+	"crypto/tls"
 	"net/http"
 	"net/url"
 	"time"
@@ -9,11 +10,22 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var HttpClient = &http.Client{}
+var HttpClient *http.Client
+
+func initHttpClient() {
+	if config.AllowInsecureTlsSkipVerify() {
+		transport := http.DefaultTransport.(*http.Transport)
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		HttpClient = &http.Client{Transport: transport}
+	} else {
+		HttpClient = &http.Client{}
+	}
+}
 
 func configChangeHandler() {
+	initHttpClient()
 	HttpClient.Timeout = time.Second * config.GetHttpTimeout()
-	logrus.Info("Initialised Http Client with timeout: ", HttpClient.Timeout)
+	logrus.Infof("Initialised Http Client: timeout=%v, insecure-tls=%v", HttpClient.Timeout, config.AllowInsecureTlsSkipVerify())
 }
 
 // MakeResilentRequest makes the provided http request with additional logic to perform

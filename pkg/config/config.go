@@ -82,3 +82,7 @@ func GetRetriesHttpRequest() int {
 func IsOpenAccess() bool {
 	return appConfig.GetBool(keyOpenAccess.key)
 }
+
+func AllowInsecureTlsSkipVerify() bool {
+	return appConfig.GetBool(keyInsecureTlsSkipVerify.key)
+}

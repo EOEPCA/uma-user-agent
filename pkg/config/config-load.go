@@ -33,6 +33,7 @@ var keyUnauthorizedResponse = configKey{"unauthorizedResponse", "Please login to
 var keyRetriesAuthorizationAttempt = configKey{"retries.authorizationAttempt", 1}
 var keyRetriesHttpRequest = configKey{"retries.httpRequest", 1}
 var keyOpenAccess = configKey{"openAccess", false}
+var keyInsecureTlsSkipVerify = configKey{"insecureTlsSkipVerify", false}
 
 // Client config
 var clientConfigKeys = []configKey{keyClientId, keyClientSecret}
@@ -50,6 +51,7 @@ var appConfigKeys = []configKey{
 	keyRetriesAuthorizationAttempt,
 	keyRetriesHttpRequest,
 	keyOpenAccess,
+	keyInsecureTlsSkipVerify,
 }
 
 // Init
