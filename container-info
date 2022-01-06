@@ -1,5 +1,4 @@
 
 export REPOSITORY=eoepca/uma-user-agent
-#DEFAULT_TAG=$(date -u +%Y.%m.%d.%H.%M)
-DEFAULT_TAG=latest
+DEFAULT_TAG=$(date -u +%Y.%m.%d.%H.%M)
 export TAG=${SUPPLIED_TAG:-${DEFAULT_TAG}}

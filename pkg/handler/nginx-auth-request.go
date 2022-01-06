@@ -19,11 +19,12 @@ const headerNameXAuthRptOptions = "X-Auth-Rpt-Options"
 
 // ClientRequestDetails represents the details of the 'incoming' request made by the client
 type ClientRequestDetails struct {
-	OrigUri     string
-	OrigMethod  string
-	UserIdToken string
-	Rpt         string
-	Tries       int
+	OrigUri           string
+	OrigMethod        string
+	UserIdToken       string
+	UserIdTokenSource TokenSource
+	Rpt               string
+	Tries             int
 }
 
 // GetRequestLogger returns a logger with fields set from the supplied client request details
@@ -82,6 +83,7 @@ func NginxAuthRequestHandler(rw http.ResponseWriter, r *http.Request) {
 
 	// Defer the Authorization decision to the PEP
 	requestLogger.Debug("START handling new request")
+	requestLogger.Debugf("%s: %s", "User ID Token SOURCE", clientRequestDetails.UserIdTokenSource)
 	deferAuthorizationToPep(clientRequestDetails, w, r)
 }
 
@@ -181,21 +183,30 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details *Cli
 	details = &ClientRequestDetails{}
 	err = nil
 
+	details.UserIdTokenSource = TS_Undefined
+
 	// Gather expected info from headers/cookies
 	details.OrigUri = r.Header.Get(headerNameXOriginalUri)
 	details.OrigMethod = r.Header.Get(headerNameXOriginalMethod)
+
+	// User ID Token has a number of sources. In prority order...
+	//
+	// 1. `Authorization Bearer` token
 	details.UserIdToken = getBearerTokenFromAuthHeader(r)
-
-	// If no user ID token in Authorization Bearer, then fall back to `X-User-Id` header
-	if len(details.UserIdToken) == 0 {
+	if len(details.UserIdToken) > 0 {
+		details.UserIdTokenSource = TS_Bearer
+	} else {
+		// 2. `X-User-Id` header
 		details.UserIdToken = r.Header.Get(headerNameXUserId)
-	}
-
-	// If no user ID token in headers, then fall back to cookie
-	if len(details.UserIdToken) == 0 {
-		c, err := r.Cookie(config.GetUserIdCookieName())
-		if err == nil {
-			details.UserIdToken = c.Value
+		if len(details.UserIdToken) > 0 {
+			details.UserIdTokenSource = TS_Header
+		} else {
+			// 3. `auth_user_id` (name configurable) cookie
+			c, err := r.Cookie(config.GetUserIdCookieName())
+			if err == nil {
+				details.UserIdToken = c.Value
+				details.UserIdTokenSource = TS_Cookie
+			}
 		}
 	}
 
@@ -385,3 +396,34 @@ func setRptCookieInResponse(rpt string, w http.ResponseWriter) {
 	w.Header().Set(headerNameXAuthRptOptions,
 		fmt.Sprintf("Path=/; Secure; HttpOnly; Max-Age=%d", config.GetAuthRptCookieMaxAge()))
 }
+
+//------------------------------------------------------------------------------
+// TokenSource
+// Keep a note of where we get the User Id Token from for debug logging
+//------------------------------------------------------------------------------
+
+type TokenSource int
+
+const (
+	TS_Undefined TokenSource = iota
+	TS_Bearer
+	TS_Header
+	TS_Cookie
+)
+
+func (ts TokenSource) String() string {
+	switch ts {
+	case TS_Undefined:
+		return "Undefined"
+	case TS_Bearer:
+		return "Bearer"
+	case TS_Header:
+		return "Header"
+	case TS_Cookie:
+		return "Cookie"
+	default:
+		return "Unknown"
+	}
+}
+
+//------------------------------------------------------------------------------
