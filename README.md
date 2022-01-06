@@ -123,12 +123,21 @@ The uma-user-agent supports the following inputs on the http subrequest from ngi
 * http headers:
   * `X-Original-Method`: http method of client request
   * `X-Original-Uri`: path to the requested resource
+  * `Authorization`: carrying `Bearer` token for user ID (optional)
   * `X-User-Id`: user ID token from OIDC (optional)
 * http cookie:
   * `auth_user_id`: user ID token from OIDC (optional)<br>
     _Cookie name is configurable_
   * `auth_rpt-<endpoint-name>`: RPT from previous successful access<br>
     _Cookie name is configurable_
+
+**User ID Token**
+
+Note that there are three means through which the User ID Token (from OIDC) can be presented to the `uma-user-agent`.<br>
+These are **in priority order**:
+1. `Authorization` header as a bearer token - in the form: `Authorization: Bearer <token>`
+1. `X-User-Id` header
+1. `auth_user_id` cookie (name of cookie is configurable)
 
 **HTTP Outputs**
 

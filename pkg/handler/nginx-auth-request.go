@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/EOEPCA/uma-user-agent/pkg/config"
 	"github.com/EOEPCA/uma-user-agent/pkg/uma"
@@ -67,7 +68,7 @@ func NginxAuthRequestHandler(rw http.ResponseWriter, r *http.Request) {
 	}()
 
 	// Gather expected info from headers/cookies
-	r, clientRequestDetails, err := processRequestHeaders(w, r)
+	clientRequestDetails, err := processRequestHeaders(w, r)
 	requestLogger := GetRequestLogger(clientRequestDetails)
 	if err != nil {
 		requestLogger.Error("ERROR processing request headers: ", err)
@@ -176,22 +177,28 @@ func handlePepResponse(clientRequestDetails *ClientRequestDetails, pepResponse *
 
 // processRequestHeaders is a helper function to extract the expected information from the
 // http headers of the received `auth_request`
-func processRequestHeaders(w http.ResponseWriter, r *http.Request) (reqUpdated *http.Request, details *ClientRequestDetails, err error) {
-	reqUpdated = r
+func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details *ClientRequestDetails, err error) {
 	details = &ClientRequestDetails{}
 	err = nil
 
 	// Gather expected info from headers/cookies
 	details.OrigUri = r.Header.Get(headerNameXOriginalUri)
 	details.OrigMethod = r.Header.Get(headerNameXOriginalMethod)
-	details.UserIdToken = r.Header.Get(headerNameXUserId)
-	// If no user ID token in header, then fall back to cookie
+	details.UserIdToken = getBearerTokenFromAuthHeader(r)
+
+	// If no user ID token in Authorization Bearer, then fall back to `X-User-Id` header
+	if len(details.UserIdToken) == 0 {
+		details.UserIdToken = r.Header.Get(headerNameXUserId)
+	}
+
+	// If no user ID token in headers, then fall back to cookie
 	if len(details.UserIdToken) == 0 {
 		c, err := r.Cookie(config.GetUserIdCookieName())
 		if err == nil {
 			details.UserIdToken = c.Value
 		}
 	}
+
 	// RPT - only if we have an ID token
 	if len(details.UserIdToken) > 0 {
 		c, err := r.Cookie(config.GetAuthRptCookieName())
@@ -220,6 +227,28 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (reqUpdated *
 	}
 
 	return
+}
+
+// getBearerTokenFromHeader extracts and returns the `Bearer` token extracted
+// from the `Authorization` http header...
+// Authorization: Bearer <token>
+func getBearerTokenFromAuthHeader(r *http.Request) (token string) {
+	token = ""
+
+	// Get `Authorization` header value
+	authHeader := r.Header.Get("Authorization")
+	if len(authHeader) == 0 {
+		return
+	}
+
+	// Get value of `Bearer` token
+	parts := strings.Split(authHeader, "Bearer")
+	if len(parts) != 2 {
+		return
+	}
+	token = strings.TrimSpace(parts[1])
+
+	return token
 }
 
 // pepAuthRequest calls the PEP `auth_request` endpoint
