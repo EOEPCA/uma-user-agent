@@ -394,7 +394,7 @@ func WriteHeaderUnauthorized(w http.ResponseWriter) {
 func setRptCookieInResponse(rpt string, w http.ResponseWriter) {
 	w.Header().Set(headerNameXAuthRpt, rpt)
 	w.Header().Set(headerNameXAuthRptOptions,
-		fmt.Sprintf("Path=/; Secure; HttpOnly; Max-Age=%d", config.GetAuthRptCookieMaxAge()))
+		fmt.Sprintf("Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=%d", config.GetAuthRptCookieMaxAge()))
 }
 
 //------------------------------------------------------------------------------
