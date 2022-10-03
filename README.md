@@ -21,8 +21,9 @@
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![License][license-shield]][license-url]
+<!-- [![License][license-shield]][license-url] -->
 
+[![Build and Publish Container][build-shield]][build-url]
 
 
 <!-- PROJECT LOGO -->
@@ -223,11 +224,10 @@ The `config.yaml` file supports the following values:
 The `uma-user-agent` is implemented using the [Go](https://golang.org/) programming language, with support from the following modules:
 
 * Runtime:
-  * [fsnotify](https://github.com/fsnotify/fsnotify) v1.5.1
-  * [gorilla/handlers](https://github.com/gorilla/handlers) v1.5.1
+  * [fsnotify](https://github.com/fsnotify/fsnotify) v1.5.4
   * [gorilla/mux](https://github.com/gorilla/mux) v1.8.0
-  * [logrus](https://github.com/sirupsen/logrus) v1.8.1
-  * [viper](https://github.com/spf13/viper) v1.8.1
+  * [logrus](https://github.com/sirupsen/logrus) v1.9.0
+  * [viper](https://github.com/spf13/viper) v1.13.0
 * Build:
   * [air](https://github.com/cosmtrek/air)
 
@@ -362,3 +362,5 @@ Project Link: [https://github.com/EOEPCA/uma-user-agent](https://github.com/EOEP
 [issues-url]: https://github.com/EOEPCA/uma-user-agent/issues
 [license-shield]: https://img.shields.io/github/license/EOEPCA/uma-user-agent.svg?style=for-the-badge
 [license-url]: https://github.com/EOEPCA/uma-user-agent/blob/master/LICENSE.txt
+[build-shield]: https://github.com/EOEPCA/uma-user-agent/actions/workflows/build-and-publish-container.yml/badge.svg
+[build-url]: https://github.com/EOEPCA/uma-user-agent/actions/workflows/build-and-publish-container.yml
