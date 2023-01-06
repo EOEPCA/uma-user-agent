@@ -6,6 +6,8 @@ name: Build and Publish Container
 # documentation.
 
 on:
+  # via github UI
+  workflow_dispatch:
   # schedule:
   #   - cron: '18 20 * * *'
   push:
