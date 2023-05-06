@@ -72,9 +72,14 @@ func configInit() {
 	appConfigLoaded := make(chan bool)
 	go configInitFromFile(clientConfig, "client", configDir, clientConfigKeys, clientConfigLoaded)
 	go configInitFromFile(appConfig, "config", configDir, appConfigKeys, appConfigLoaded)
-	if <-clientConfigLoaded {
-		logrus.Info("Client configuration loaded successfully")
-	}
+
+	// client config aync - no need to wait since the readiness probe reflects the client state
+	go func() {
+		if <-clientConfigLoaded {
+			logrus.Info("Client configuration loaded successfully")
+		}
+	}()
+	// application config is mandatory before progressing
 	if <-appConfigLoaded {
 		logrus.Info("Application configuration loaded successfully")
 	}

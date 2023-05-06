@@ -9,8 +9,9 @@ import (
 
 func IsReady() (isReady bool) {
 	isReady = true &&
-		len(GetClientId()) > 0 &&
-		len(GetClientSecret()) > 0
+		((len(GetClientId()) > 0 &&
+			len(GetClientSecret()) > 0) ||
+			(IsOpenAccess()))
 	return
 }
 
