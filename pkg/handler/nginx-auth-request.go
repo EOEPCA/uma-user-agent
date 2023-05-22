@@ -77,7 +77,7 @@ func NginxAuthRequestHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	// If we are in 'OPEN' mode then the request is simply allowed
-	if nginxAuthRequestHandlerOpen(w, r) {
+	if nginxAuthRequestHandlerOpen(clientRequestDetails, w, r) {
 		return
 	}
 
@@ -113,19 +113,11 @@ func deferAuthorizationToPep(clientRequestDetails *ClientRequestDetails, w http.
 }
 
 // nginxAuthRequestHandlerOpen provides an nginx `auth_request` handler for OPEN access
-func nginxAuthRequestHandlerOpen(w http.ResponseWriter, r *http.Request) (requestHandled bool) {
+func nginxAuthRequestHandlerOpen(clientRequestDetails *ClientRequestDetails, w http.ResponseWriter, r *http.Request) (requestHandled bool) {
 	requestHandled = config.IsOpenAccess()
 	if requestHandled {
 		// Pass on the User ID Token if provided in the request
-		userIdToken := r.Header.Get(headerNameXUserId)
-		// If no user ID token in header, then fall back to cookie
-		if len(userIdToken) == 0 {
-			c, err := r.Cookie(config.GetUserIdCookieName())
-			if err == nil {
-				userIdToken = c.Value
-			}
-		}
-		w.Header().Set(headerNameXUserId, userIdToken)
+		w.Header().Set(headerNameXUserId, clientRequestDetails.UserIdToken)
 
 		fmt.Fprintln(w, "Allowing OPEN access")
 	}
