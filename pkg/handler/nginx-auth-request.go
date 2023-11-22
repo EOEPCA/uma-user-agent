@@ -202,11 +202,20 @@ func processRequestHeaders(w http.ResponseWriter, r *http.Request) (details *Cli
 		}
 	}
 
-	// RPT - only if we have an ID token
-	if len(details.UserIdToken) > 0 {
+	// RPT
+	// Priority order...
+	//   1. From cookie
+	//   2. From Bearer - also interpreted as user ID token
+	{
 		c, err := r.Cookie(config.GetAuthRptCookieName())
+		// 1. From cookie
 		if err == nil {
 			details.Rpt = c.Value
+		} else {
+			// 2. From Bearer
+			if details.UserIdTokenSource == TS_Bearer {
+				details.Rpt = details.UserIdToken
+			}
 		}
 	}
 
